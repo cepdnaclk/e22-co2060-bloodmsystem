@@ -49,10 +49,10 @@ const QRScanner = () => {
 
     return (
         <div className="card fade-in qr-scanner-card" style={{ padding: '20px' }}>
-            <div className="card-header" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
-                <h2>Donor QR Scanner</h2>
+            <div className="card-header" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                <h2 style={{ margin: 0 }}>Donor QR Scanner</h2>
                 {!scannerActive && (
-                    <button className="btn btn-primary" onClick={startScanner} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="dashboard btn btn-primary" onClick={startScanner} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Camera size={18} /> Start Scanner
                     </button>
                 )}

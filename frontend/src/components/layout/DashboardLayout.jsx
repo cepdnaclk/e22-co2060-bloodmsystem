@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Menu, X, Home } from 'lucide-react';
 import { useAuth } from '../../context/auth/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { LOGOS } from '../../config/imageAssets';
 import '../../styles/dashboard.css';
 
 const DashboardLayout = ({ 
@@ -58,6 +59,7 @@ const DashboardLayout = ({
       <aside className={`dashboard-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
           <div className="brand-title">
+            <img src={LOGOS.icon} alt="HopeDrop Logo" style={{ height: '32px', width: 'auto' }} />
             <span className="text-primary">HopeDrop</span>
           </div>
           <button type="button" className="mobile-toggle" onClick={() => setIsMobileOpen(false)} aria-label="Close sidebar">

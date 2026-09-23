@@ -320,7 +320,7 @@ const CampDashboard = () => {
           </button>
           
           {/* Camp Details Section */}
-          <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: 'var(--color-secondary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+          <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
             <h2 style={{ margin: '0 0 16px 0', color: 'var(--color-text-main)' }}>{selectedCamp.title} - Details</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
               <div>
@@ -340,7 +340,7 @@ const CampDashboard = () => {
 
           <h3 style={{ marginBottom: '16px', color: 'var(--color-text-main)' }}>Donor Workflow</h3>
           
-          <div style={{ marginBottom: '20px', color: 'var(--color-text-muted)', fontSize: '0.92rem', padding: '12px', backgroundColor: 'var(--color-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+          <div style={{ marginBottom: '20px', color: 'var(--color-text-muted)', fontSize: '0.92rem', padding: '12px', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
             <strong>Summary:</strong>{' '}
             Registered <StatusBadge status={groupedRegistrations.registered.length.toString()} /> • 
             Arrived <StatusBadge status={groupedRegistrations.arrived.length.toString()} /> • 
@@ -465,24 +465,24 @@ const CampDashboard = () => {
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h2 style={{ color: 'var(--color-text-main)' }}>Your Camps</h2>
-              <button className="dashboard btn btn-primary" onClick={() => setActiveTab('create')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+              <h2 style={{ color: 'var(--color-text-main)', margin: 0 }}>Your Camps</h2>
+              <button className="dashboard btn btn-primary" onClick={() => setActiveTab('create')} style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' }}>
                 <Plus size={16} /> Schedule Camp
               </button>
             </div>
             
             {camps.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', backgroundColor: 'var(--color-secondary)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--color-border)' }}>
+              <div style={{ textAlign: 'center', padding: '40px', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--color-border)' }}>
                 <CalendarDays size={48} style={{ color: 'var(--color-border)', marginBottom: '16px' }} />
                 <p style={{ color: 'var(--color-text-muted)', marginBottom: '16px' }}>No camps organized yet.</p>
               </div>
             ) : (
               <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
                 {camps.map(camp => (
-                  <div key={camp.id} style={{ backgroundColor: 'var(--color-secondary)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div key={camp.id} style={{ backgroundColor: 'var(--color-surface)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <h3 style={{ margin: 0, color: 'var(--color-text-main)' }}>{camp.title}</h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
                       <Calendar size={14} /> {camp.date} ({camp.start_time} - {camp.end_time})
@@ -502,7 +502,7 @@ const CampDashboard = () => {
             )}
           </div>
 
-          <div style={{ backgroundColor: 'var(--color-secondary)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', alignSelf: 'start' }}>
+          <div style={{ backgroundColor: 'var(--color-surface)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-main)', marginBottom: '16px', fontSize: '1.1rem' }}>
               <Activity size={18} /> Live Activity Feed
             </h3>
@@ -530,13 +530,20 @@ const CampDashboard = () => {
 
   return (
     <DashboardLayout
-      userName={displayName}
-      userRole={displayRole}
+      title="Blood Camp Organizer Dashboard"
+      subtitle="Manage your blood donation drives and workflow."
+      brandLabel={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <span style={{ color: 'var(--color-primary)', fontWeight: 'bold', fontSize: '1.1em', textTransform: 'none' }}>
+            {displayName}
+          </span>
+          <span style={{ fontSize: '0.9em', letterSpacing: '0.5px', textTransform: 'uppercase' }}>{displayRole} PORTAL</span>
+        </div>
+      }
       menuItems={menuItems}
       activeTab={activeTab}
       onTabChange={setActiveTab}
       headerActions={headerActions}
-      onLogout={logout}
     >
       {renderContent()}
     </DashboardLayout>

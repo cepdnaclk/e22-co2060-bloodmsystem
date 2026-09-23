@@ -78,21 +78,10 @@ function App() {
                 </RoleRoute>
               } />
 
-              <Route path="/doctor" element={
-                <RoleRoute allowedRoles={['doctor', 'medical_officer', 'admin']}>
-                  <DoctorDashboard />
-                </RoleRoute>
-              } />
 
               <Route path="/staff" element={
                 <RoleRoute allowedRoles={['bloodcamp', 'admin']}>
                   <LabDashboard />
-                </RoleRoute>
-              } />
-
-              <Route path="/inventory" element={
-                <RoleRoute allowedRoles={['Inventor', 'inventor', 'admin']}>
-                  <StaffDashboard />
                 </RoleRoute>
               } />
 
@@ -102,6 +91,19 @@ function App() {
                 </RoleRoute>
               } />
             </Route>
+
+            {/* Standalone Dashboards (No Main Navbar) */}
+            <Route path="/doctor" element={
+              <RoleRoute allowedRoles={['doctor', 'medical_officer', 'admin']}>
+                <DoctorDashboard />
+              </RoleRoute>
+            } />
+            
+            <Route path="/inventory" element={
+              <RoleRoute allowedRoles={['Inventor', 'inventor', 'admin']}>
+                <StaffDashboard />
+              </RoleRoute>
+            } />
 
             {/* Blood Camp Organizer Route - No Main Layout as they have their own dashboard */}
             <Route path="/bloodcamp" element={
