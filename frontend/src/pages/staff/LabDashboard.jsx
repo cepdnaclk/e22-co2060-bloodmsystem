@@ -142,16 +142,16 @@ const LabDashboard = () => {
 
     return (
         <div className="dashboard lab-dashboard fade-in">
-            <div className="dashboard-header">
+            <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
                 <div>
-                    <h1 className="welcome-text">Camp Operations Dashboard</h1>
-                    <p className="text-muted">Scan donor → Arrived → Screening → Donated</p>
+                    <h1 className="welcome-text" style={{ margin: 0, marginBottom: '4px' }}>Camp Operations Dashboard</h1>
+                    <p className="text-muted" style={{ margin: 0 }}>Scan donor → Arrived → Screening → Donated</p>
                 </div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                    <button className="btn btn-outline" onClick={() => loadData(selectedCampId)}>
+                <div style={{ display: 'flex', gap: 10, flex: 'none' }}>
+                    <button className="btn btn-outline" onClick={() => loadData(selectedCampId)} style={{ width: 'max-content' }}>
                         <RefreshCcw size={16} style={{ marginRight: 6 }} /> Refresh
                     </button>
-                    <button className="btn btn-primary" onClick={openNotifications}>
+                    <button className="btn btn-primary" onClick={openNotifications} style={{ width: 'max-content' }}>
                         <Bell size={16} style={{ marginRight: 6 }} /> Notifications ({unreadCount})
                     </button>
                 </div>

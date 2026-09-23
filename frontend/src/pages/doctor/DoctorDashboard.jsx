@@ -312,15 +312,18 @@ const DoctorDashboard = () => {
     const result = await Swal.fire({
       title: "EMERGENCY BLOOD REQUEST",
       html: `
-                <div style="text-align: left;">
-                    <p style="color: var(--color-critical); font-weight: bold; margin-bottom: 10px;">This triggers an immediate high-priority alert to the blood bank AND eligible donors.</p>
-                    <label>Blood Group Required:</label>
-                    <select id="em-blood" class="swal2-select" style="display: flex; width: 100%;">
+                <div style="text-align: left; padding: 0 10px; box-sizing: border-box;">
+                    <p style="color: var(--color-critical); font-weight: bold; margin-bottom: 16px; font-size: 0.95em;">
+                        This triggers an immediate high-priority alert to the blood bank AND eligible donors.
+                    </p>
+                    <label style="font-weight: 600; font-size: 0.9em; color: var(--color-text-main); display: block; margin-bottom: 6px;">Blood Group Required:</label>
+                    <select id="em-blood" style="display: block; width: 100%; box-sizing: border-box; padding: 10px 14px; margin-bottom: 16px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-main); font-family: inherit; font-size: 0.95rem; outline: none;">
                         <option>O-</option><option>O+</option><option>A-</option><option>A+</option>
                         <option>B-</option><option>B+</option><option>AB-</option><option>AB+</option>
                     </select>
-                    <label style="margin-top: 10px; display: block;">Units Needed:</label>
-                    <input id="em-units" type="number" value="2" class="swal2-input" style="display: flex; width: 100%;" />
+                    
+                    <label style="font-weight: 600; font-size: 0.9em; color: var(--color-text-main); display: block; margin-bottom: 6px;">Units Needed:</label>
+                    <input id="em-units" type="number" value="2" min="1" style="display: block; width: 100%; box-sizing: border-box; padding: 10px 14px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-main); font-family: inherit; font-size: 0.95rem; outline: none;" />
                 </div>
             `,
       icon: "warning",
@@ -851,7 +854,14 @@ const DoctorDashboard = () => {
     <DashboardLayout
       title={displayName}
       subtitle={`${displayHospital} • ${displayDepartment}`}
-      brandLabel="Doctor Portal"
+      brandLabel={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <span style={{ color: 'var(--color-primary)', fontWeight: 'bold', fontSize: '1.1em', textTransform: 'none' }}>
+            Dr. {displayName}
+          </span>
+          <span style={{ fontSize: '0.9em', letterSpacing: '0.5px' }}>DOCTOR PORTAL</span>
+        </div>
+      }
       menuItems={MENU_ITEMS} // <-- Using the stable constant here stops the sidebar flash!
       activeTab={activeTab}
       onTabChange={setActiveTab}

@@ -4,6 +4,7 @@ import {
     Stethoscope, Clock, CheckCircle, XCircle 
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import DashboardLayout from '../../components/layout/DashboardLayout';
 import './StaffDashboard.scss';
 import { getBloodStock } from '../../api/inventoryService';
 import { 
@@ -45,14 +46,16 @@ const StaffDashboard = () => {
         Swal.fire({
             title: 'Add New Blood Packet',
             html: `
-                <select id="swal-type" class="swal2-select" style="display: flex; width: 100%;">
-                    <option value="" disabled selected>Select Blood Group</option>
-                    <option value="A+">A+</option><option value="A-">A-</option>
-                    <option value="B+">B+</option><option value="B-">B-</option>
-                    <option value="O+">O+</option><option value="O-">O-</option>
-                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
-                </select>
-                <input id="swal-units" type="number" min="1" class="swal2-input" placeholder="Number of Units" style="display: flex; width: 100%;">
+                <div style="text-align: left; padding: 0 10px; box-sizing: border-box;">
+                    <select id="swal-type" style="display: block; width: 100%; box-sizing: border-box; padding: 10px 14px; margin-bottom: 16px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-main); font-family: inherit; font-size: 0.95rem; outline: none;">
+                        <option value="" disabled selected>Select Blood Group</option>
+                        <option value="A+">A+</option><option value="A-">A-</option>
+                        <option value="B+">B+</option><option value="B-">B-</option>
+                        <option value="O+">O+</option><option value="O-">O-</option>
+                        <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                    </select>
+                    <input id="swal-units" type="number" min="1" placeholder="Number of Units" style="display: block; width: 100%; box-sizing: border-box; padding: 10px 14px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-main); font-family: inherit; font-size: 0.95rem; outline: none;" />
+                </div>
             `,
             focusConfirm: false,
             showCancelButton: true,
@@ -90,10 +93,13 @@ const StaffDashboard = () => {
         Swal.fire({
             title: 'Approve Request',
             html: `
-                <label>Units to Approve (Requested: ${requestedUnits})</label>
-                <input id="swal-units-app" type="number" value="${requestedUnits}" class="swal2-input" style="display: flex; width: 100%;">
-                <label>Approval Note (Optional)</label>
-                <input id="swal-note-app" type="text" class="swal2-input" placeholder="e.g. Dispatched via cooler" style="display: flex; width: 100%;">
+                <div style="text-align: left; padding: 0 10px; box-sizing: border-box;">
+                    <label style="font-weight: 600; font-size: 0.9em; color: var(--color-text-main); display: block; margin-bottom: 6px;">Units to Approve (Requested: ${requestedUnits})</label>
+                    <input id="swal-units-app" type="number" value="${requestedUnits}" style="display: block; width: 100%; box-sizing: border-box; padding: 10px 14px; margin-bottom: 16px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-main); font-family: inherit; font-size: 0.95rem; outline: none;" />
+                    
+                    <label style="font-weight: 600; font-size: 0.9em; color: var(--color-text-main); display: block; margin-bottom: 6px;">Approval Note (Optional)</label>
+                    <input id="swal-note-app" type="text" placeholder="e.g. Dispatched via cooler" style="display: block; width: 100%; box-sizing: border-box; padding: 10px 14px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-main); font-family: inherit; font-size: 0.95rem; outline: none;" />
+                </div>
             `,
             showCancelButton: true,
             confirmButtonColor: '#2e7d32',
@@ -201,9 +207,9 @@ const StaffDashboard = () => {
             case 'inventory':
                 return (
                     <div className="card fade-in">
-                        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h2><ListChecks size={20} /> Live Blood Inventory</h2>
-                            <button className="btn btn-primary" onClick={handleAddPacket}>
+                        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                            <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><ListChecks size={20} /> Live Blood Inventory</h2>
+                            <button className="dashboard btn btn-primary" onClick={handleAddPacket}>
                                 <PackagePlus size={18} /> Add Stock
                             </button>
                         </div>
@@ -263,52 +269,32 @@ const StaffDashboard = () => {
         }
     };
 
+    const MENU_ITEMS = [
+        { id: 'requests', icon: <Stethoscope size={20} />, label: 'Doctor Requests' },
+        { id: 'inventory', icon: <ListChecks size={20} />, label: 'Live Inventory' },
+        { id: 'pending-changes', icon: <Clock size={20} />, label: 'Stock Approvals' },
+    ];
+
     return (
-        <div className="staff-dashboard">
-            {/* SIDEBAR */}
-            <div className="staff-sidebar">
-                <div className="sidebar-header" style={{ padding: '0 20px 20px', borderBottom: '1px solid #eee', marginBottom: '10px' }}>
-                    <h2 style={{ fontSize: '20px', color: '#1976d2', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Activity size={24} /> HopeDrop
-                    </h2>
-                    <span style={{ fontSize: '12px', color: '#666', textTransform: 'uppercase' }}>Blood Bank Admin</span>
+        <DashboardLayout
+            title="Blood Bank Dashboard"
+            subtitle="Manage stock and fulfill hospital requests."
+            brandLabel={
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ color: 'var(--color-primary)', fontWeight: 'bold', fontSize: '1.1em', textTransform: 'none' }}>
+                        Blood Bank Admin
+                    </span>
+                    <span style={{ fontSize: '0.9em', letterSpacing: '0.5px' }}>STAFF PORTAL</span>
                 </div>
-
-                <nav style={{ display: 'flex', flexDirection: 'column', gap: '5px', padding: '0 10px' }}>
-                    {[
-                        { id: 'requests', icon: <Stethoscope size={20} />, label: 'Doctor Requests' },
-                        { id: 'inventory', icon: <ListChecks size={20} />, label: 'Live Inventory' },
-                        { id: 'pending-changes', icon: <Clock size={20} />, label: 'Stock Approvals' },
-                    ].map(item => (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveTab(item.id)}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-                                border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', fontWeight: '500',
-                                backgroundColor: activeTab === item.id ? '#e3f2fd' : 'transparent',
-                                color: activeTab === item.id ? '#1976d2' : '#555',
-                                textAlign: 'left', transition: 'all 0.2s'
-                            }}
-                        >
-                            {item.icon} <span>{item.label}</span>
-                        </button>
-                    ))}
-                </nav>
-            </div>
-
-            {/* MAIN CONTENT AREA */}
-            <div className="main-content">
-                <div className="header-actions">
-                    <div>
-                        <h1 style={{ margin: '0 0 5px 0', fontSize: '28px', color: '#333' }}>Blood Bank Dashboard</h1>
-                        <p style={{ margin: 0, color: '#666', fontSize: '15px' }}>Manage stock and fulfill hospital requests.</p>
-                    </div>
-                </div>
-
+            }
+            menuItems={MENU_ITEMS}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+        >
+            <div className="staff-dashboard-page">
                 {loading ? <p>Loading data...</p> : renderContent()}
             </div>
-        </div>
+        </DashboardLayout>
     );
 };
 

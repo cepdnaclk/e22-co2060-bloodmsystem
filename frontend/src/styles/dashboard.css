@@ -14,7 +14,7 @@
 
 /* ── Sidebar ── */
 .dashboard-sidebar {
-  width: 260px;
+  width: 300px;
   background-color: var(--color-surface);
   border-right: 1px solid var(--color-border);
   display: flex;
@@ -73,7 +73,11 @@
   padding: var(--spacing-3) var(--spacing-4);
   border-radius: var(--radius-md);
   color: var(--color-text-muted);
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
   cursor: pointer;
   border: none;
   background: transparent;
@@ -90,7 +94,6 @@
 .nav-item.active {
   background-color: var(--color-primary-light);
   color: var(--color-primary);
-  font-weight: 600;
 }
 
 .sidebar-footer {
@@ -226,14 +229,20 @@
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm);
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--spacing-3);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+}
+
+.stat-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
 }
 
 .stat-content {
@@ -244,7 +253,7 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 500;
-  margin-bottom: var(--spacing-1);
+  margin: 0;
 }
 
 .stat-value {
@@ -255,8 +264,8 @@
 }
 
 .stat-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
