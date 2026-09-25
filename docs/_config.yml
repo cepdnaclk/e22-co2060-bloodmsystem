@@ -1,9 +1,9 @@
 # This theme is based on https://github.com/jekyll/minima
 # Please refer above link to know the available configurations
 
-title: ""
+title: "HopeDrop - Blood Bank Management System"
 remote_theme: cepdnaclk/eYY-project-theme
-description: ""
+description: "A comprehensive web-based Blood Bank Management System that connects blood banks, hospitals, donors, and medical professionals to streamline blood donation, inventory management, and hospital coordination."
 markdown: kramdown
 
 kramdown:

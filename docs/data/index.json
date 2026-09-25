@@ -1,35 +1,29 @@
 {
+    "title": "HopeDrop - Blood Bank Management System",
     "team": [
         {
-            "name": "K Dulaj Ashen",
+            "name": "K. Dulaj Ashen",
             "email": "e22032@eng.pdn.ac.lk",
             "eNumber": "E/22/032"
         },
         {
-            "name": "rmss kumara",
+            "name": "R.M.S.S. Kumara",
             "email": "e22203@eng.pdn.ac.lk",
             "eNumber": "E/22/203"
         },
         {
-            "name": "hasara panchani",
+            "name": "Hasara Panchani",
             "email": "e22269@eng.pdn.ac.lk",
             "eNumber": "E/22/269"
         },
-            {
-            "name": "gayasha",
+        {
+            "name": "Gayasha Sandeepa",
             "email": "e22353@eng.pdn.ac.lk",
             "eNumber": "E/22/353"
         }
     ],
-    "supervisors": [
-        {
-            "name": "Dr. Supervisor 1",
-            "email": "email@eng.pdn.ac.lk"
-        },
-        {
-            "name": "Supervisor 2",
-            "email": "email@eng.pdn.ac.lk"
-        }
-    ],
-    "tags": []
+    "supervisors": [],
+    "tags": ["Web", "Blood Bank", "Healthcare", "Database", "Node.js", "React"],
+    "image": "cover_page.jpg",
+    "thumbnail": "thumbnail.jpg"
 }
