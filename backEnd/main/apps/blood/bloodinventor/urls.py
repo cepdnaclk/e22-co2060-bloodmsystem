@@ -20,6 +20,8 @@ urlpatterns = [
     path("admin/", include("apps.blood.bloodinventor.urls_admin")),
 
     # Backward-compatible alias used by existing frontend.
+    path("", live_stock, name="blood_root"),
+    path("inventory/", live_stock, name="blood_inventory"),
     path("live-stock/", live_stock, name="live_stock"),
 
     # ─── NEW: Hospital-wise stock (public) ───────────────────────

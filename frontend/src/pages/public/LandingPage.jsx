@@ -443,7 +443,7 @@ const filteredHospitals = hospitalsStock.filter(h => {
                     <div className="footer-links">
                         <h4>Quick Links</h4>
                         <Link to="/donor">Donor Portal</Link>
-                        <Link to="/patient">Request Blood</Link>
+                        <Link to="/events">Blood Camps</Link>
                         <Link to="/login">Hospital Login</Link>
                         <Link to="/contact">Contact Us</Link>
                     </div>
