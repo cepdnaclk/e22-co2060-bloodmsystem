@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { showSuccessToast, showErrorToast } from '../../utils/swalUtils';
+import { API_BASE_URL } from '../../config/apiConfig';
 import './ForgotPassword.css';
 
 const ForgotPassword = () => {
@@ -22,7 +23,7 @@ const ForgotPassword = () => {
         setLoading(true);
 
         try {
-            await axios.post('http://localhost:8000/api/v1/auth/password-reset/', {
+            await axios.post(`${API_BASE_URL.replace(/\/$/, '')}/auth/password-reset/`, {
                 email: email,
             });
 

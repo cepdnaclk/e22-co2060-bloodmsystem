@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
 // Update baseURL to point to the base bloodinventor so we can access both /public and our new endpoints easily
 const inventoryAPI = axios.create({
-    baseURL: 'http://localhost:8000/api/v1/blood',
+    baseURL: `${API_BASE_URL.replace(/\/$/, '')}/blood`,
     headers: {
         'Content-Type': 'application/json',
     },

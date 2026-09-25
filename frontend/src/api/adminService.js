@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
 // Create a configured axios instance for admin protected routes
 const adminAxios = axios.create({
-    baseURL: 'http://localhost:8000/api/v1',
+    baseURL: API_BASE_URL.replace(/\/$/, ''),
     headers: {
         'Content-Type': 'application/json',
     },

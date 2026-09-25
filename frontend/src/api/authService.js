@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
-// Currently Auth context handles token updates but uses this raw URL pattern. We'll use this service to keep it clean.
-const AUTH_URL = 'http://localhost:8000/api/v1/auth';
+const AUTH_URL = `${API_BASE_URL.replace(/\/$/, '')}/auth`;
+
 
 /**
  * Registers a new user

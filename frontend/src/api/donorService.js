@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
 const donorAPI = axios.create({
-    baseURL: 'http://localhost:8000/api/v1/donor/public',
+    baseURL: `${API_BASE_URL.replace(/\/$/, '')}/donor/public`,
     headers: {
         'Content-Type': 'application/json',
     },
