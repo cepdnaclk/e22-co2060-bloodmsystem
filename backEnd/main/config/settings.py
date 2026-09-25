@@ -207,7 +207,15 @@ extra_cors = os.environ.get("CORS_ALLOWED_ORIGINS")
 if extra_cors:
     CORS_ALLOWED_ORIGINS.extend([origin.strip() for origin in extra_cors.split(",") if origin.strip()])
 
-CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL_ORIGINS", "True").lower() in ("true", "1")
+# Match all Vercel deployment URLs automatically
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+]
+
+# Allow all origins in development; require explicit origins in production
+CORS_ALLOW_ALL_ORIGINS = os.environ.get(
+    "CORS_ALLOW_ALL_ORIGINS", "True" if DEBUG else "False"
+).lower() in ("true", "1")
 CORS_ALLOW_CREDENTIALS = True
 
 # REST Framework Settings
