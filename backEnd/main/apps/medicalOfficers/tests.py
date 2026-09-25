@@ -1,2 +1,3 @@
+from tests.test_medical_officers import MedicalOfficersTests
 
-# Create your tests here.
+__all__ = ["MedicalOfficersTests"]

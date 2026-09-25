@@ -1,2 +1,3 @@
+from tests.test_donor import DonorWorkflowTests
 
-# Create your tests here.
+__all__ = ["DonorWorkflowTests"]

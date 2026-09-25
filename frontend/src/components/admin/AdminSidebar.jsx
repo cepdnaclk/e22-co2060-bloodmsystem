@@ -13,6 +13,7 @@ import {
   LogOut,
   Settings,
   Calendar,
+  Boxes,
 } from 'lucide-react';
 import './AdminSidebar.css';
 
@@ -47,6 +48,7 @@ const AdminSidebar = () => {
     { path: '/admin?tab=camps', icon: Calendar, label: 'Camp Organizers' },
     { path: '/admin/doctors', icon: Users, label: 'Doctors' },
     { path: '/admin/inventory', icon: Droplet, label: 'Inventory' },
+    { path: '/admin/check-inventory', icon: Boxes, label: 'Check Stock' },
     { path: '/admin/requests', icon: FileText, label: 'Blood Requests' },
     { path: '/admin/donations', icon: CheckCircle, label: 'Donations' },
     { path: '/admin/settings', icon: Settings, label: 'Settings' },

@@ -1,2 +1,3 @@
+from tests.test_admin_dashboard import AdminDashboardTests
 
-# Create your tests here.
+__all__ = ["AdminDashboardTests"]

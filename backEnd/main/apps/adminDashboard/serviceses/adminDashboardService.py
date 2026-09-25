@@ -13,6 +13,7 @@ from apps.UserAuth.models.hospital import Hospital
 from apps.blood.bloodinventor.models.bloodinventor import BloodInventory
 from apps.blood.bloodinventor.models.bloodRequest import BloodRequest
 from apps.donor.models.donationHistory import DonationHistory
+from apps.medicalOfficers.models.hospitalStaff import StaffProfile
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -38,10 +39,18 @@ def get_admin_dashboard_stats(request):
         .order_by("-count")[:5]
     )
 
+    total_staff = StaffProfile.objects.count()
+    total_donors = User.objects.filter(role=User.DONOR).count()
+    total_users = User.objects.count()
+
     return Response({
+        "total_staff": total_staff,
         "total_doctors": total_doctors,
+        "total_donors": total_donors,
+        "total_users": total_users,
         "total_hospitals": total_hospitals,
         "total_units": total_units,
+        "total_inventory_units": total_units,
         "pending_requests": pending_requests,
         "approved_donations": approved_donations,
         "workflow_status_counts": workflow_status_counts,

@@ -16,7 +16,7 @@ import DonorRegistration from './pages/donor/DonorRegistration';
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
 import LabDashboard from './pages/staff/LabDashboard';
 import StaffDashboard from './pages/staff/StaffDashboard';
-import PatientDashboard from './pages/patient/PatientDashboard';
+import InventoryPage from './pages/admin/InventoryPage';
 import DonorNotifications from './pages/donor/DonorNotifications';
 import CampDashboard from './pages/bloodcamp/CampDashboard';
 import ContactPage from './pages/public/ContactPage';
@@ -84,12 +84,6 @@ function App() {
                   <LabDashboard />
                 </RoleRoute>
               } />
-
-              <Route path="/patient" element={
-                <RoleRoute allowedRoles={['doctor', 'medical_officer', 'admin']}>
-                  <PatientDashboard />
-                </RoleRoute>
-              } />
             </Route>
 
             {/* Standalone Dashboards (No Main Navbar) */}
@@ -105,19 +99,26 @@ function App() {
               </RoleRoute>
             } />
 
+            <Route path="/inventory/live" element={
+              <RoleRoute allowedRoles={['Inventor', 'inventor', 'admin']}>
+                <InventoryPage />
+              </RoleRoute>
+            } />
+
             {/* Blood Camp Organizer Route - No Main Layout as they have their own dashboard */}
             <Route path="/bloodcamp" element={
               <RoleRoute allowedRoles={['bloodcamp', 'admin']}>
                 <CampDashboard />
               </RoleRoute>
             } />
-            {/* Admin Routes */}
             <Route path="/admin" element={<RoleRoute allowedRoles={['admin']}><AdminLayout /></RoleRoute>}>
               <Route index element={<AdminDashboard />} />
               <Route path="doctors" element={<DoctorsList />} />
               <Route path="hospitals" element={<HospitalManagement />} />
               <Route path="inventory" element={<NationalInventoryDashboard />} />
               <Route path="inventory/hospital/:hospitalId" element={<HospitalInventoryDetail />} />
+              <Route path="check-inventory" element={<InventoryPage />} />
+              <Route path="stock" element={<InventoryPage />} />
               <Route path="expiry-alerts" element={<ExpiryAlertsPage />} />
               <Route path="camp-blood" element={<CampBloodTrackingPage />} />
               <Route path="requests" element={<BloodRequestsPage />} />
