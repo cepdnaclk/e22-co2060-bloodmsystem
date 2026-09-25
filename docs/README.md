@@ -3,7 +3,7 @@ layout: home
 permalink: index.html
 
 # Please update this with your repository name and project title
-repository-name: e22-co2060-Blood-Bank-management-System-web-app
+repository-name: e22-co2060-Blood-Bank-management-System
 title: HopeDrop - Blood Bank Management System
 ---
 
@@ -46,7 +46,7 @@ Key roles supported: Donors, Lab Technicians, Doctors, Blood Camp Coordinators, 
 ## Features
 
 - Real-time blood inventory tracking by blood type and expiry
-- Donor registration, scheduling, and history management
+- Donor registration, scheduling and history management
 - Blood camp organization and volunteer coordination
 - Inter-hospital blood transfer requests and approvals
 - Doctor and lab technician dashboards for patient requests
