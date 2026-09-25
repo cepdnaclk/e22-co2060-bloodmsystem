@@ -8,13 +8,13 @@ The Blood Bank Application helps **donors, medical staff, and administrators** e
 <details>
 <summary>Donor Portal</summary>
 
-- Personalized dashboard and donation stats  
-- Eligibility quiz with interactive logic  
-- Donation history with status badges  
-- Printable digital certificates  
-- Camp/Hospital locator (maps)  
-- Appointment booking with QR code confirmation  
-- Profile management (contact info, password, address)
+- Personalized dashboard and donation stats . 
+- Eligibility quiz with interactive logic  .
+- Donation history with status badges  .
+- Printable digital certificates  .
+- Camp/Hospital locator (maps)  .
+- Appointment booking with QR code confirmation . 
+- Profile management (contact info, password, address) .
 
 </details>
 
