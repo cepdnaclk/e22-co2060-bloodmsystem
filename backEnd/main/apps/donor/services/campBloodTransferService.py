@@ -129,7 +129,7 @@ def receive_camp_blood(request, collection_id):
     Inventory officer receives camp blood at hospital.
     """
     user = request.user
-    if user.role not in {"Inventor", "inventory_officer", "admin"}:
+    if user.role.lower() not in {"inventor", "inventory_officer", "admin"}:
         raise PermissionDenied("Only inventory officers can receive blood.")
 
     collection = get_object_or_404(
@@ -163,7 +163,7 @@ def verify_camp_blood(request, collection_id):
     Payload (optional): { "temperature": 4.0, "reject": false, "rejection_reason": "" }
     """
     user = request.user
-    if user.role not in {"Inventor", "inventory_officer", "admin"}:
+    if user.role.lower() not in {"inventor", "inventory_officer", "admin"}:
         raise PermissionDenied("Only inventory officers can verify blood.")
 
     collection = get_object_or_404(

@@ -8,7 +8,8 @@ import video1 from '../../assets/backgroundvideos/video01.mp4';
 import video2 from '../../assets/backgroundvideos/video02.mp4';
 
 import { getLatestPublicCamp } from '../../services/campService';
-import { getAllHospitalsStock } from '../../api/inventoryService';
+import { getAllHospitalsStock, getHospitalStockDetail } from '../../api/inventoryService';
+import { X, ExternalLink, Info } from 'lucide-react';
 
 const LandingPage = () => {
 const DEFAULT_STOCK = {
@@ -33,6 +34,12 @@ const [hospitalsStock, setHospitalsStock] = useState([]);
 const [hospitalsLoading, setHospitalsLoading] = useState(true);
 const [hospitalSearch, setHospitalSearch] = useState('');
 const [districtFilter, setDistrictFilter] = useState('');
+
+// Modal state
+const [selectedHospital, setSelectedHospital] = useState(null);
+const [hospitalDetail, setHospitalDetail] = useState(null);
+const [detailLoading, setDetailLoading] = useState(false);
+const [isModalOpen, setIsModalOpen] = useState(false);
 
 const API_BASE = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1").replace(/\/$/, '');
 
@@ -84,6 +91,24 @@ const fetchHospitalsStock = async () => {
         console.error("Error fetching hospitals stock:", error);
     } finally {
         setHospitalsLoading(false);
+    }
+};
+
+const handleViewHospitalDetail = async (hospital) => {
+    setSelectedHospital(hospital);
+    setIsModalOpen(true);
+    setDetailLoading(true);
+    setHospitalDetail(null);
+    
+    try {
+        const { success, data } = await getHospitalStockDetail(hospital.id);
+        if (success) {
+            setHospitalDetail(data);
+        }
+    } catch (error) {
+        console.error("Error fetching hospital detail:", error);
+    } finally {
+        setDetailLoading(false);
     }
 };
 
@@ -348,19 +373,31 @@ const filteredHospitals = hospitalsStock.filter(h => {
                                     <tbody className="divide-y divide-gray-100">
                                         {filteredHospitals.length > 0 ? (
                                             filteredHospitals.map(h => (
-                                                <tr key={h.id} className="hover:bg-red-50 transition-colors">
-                                                    <td className="px-6 py-4">
-                                                        <span className="font-medium text-gray-900">{h.name}</span>
+                                                <tr key={h.id} className="hover:bg-red-50 transition-colors group">
+                                                    <td className="px-6 py-4" data-label="Hospital Name">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium text-gray-900">{h.name}</span>
+                                                            <span className="text-xs text-gray-400">{h.address}</span>
+                                                        </div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-gray-600 text-sm">{h.district || 'Unassigned'}</td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                            h.status === 'Normal' ? 'bg-green-100 text-green-800' :
-                                                            h.status === 'Low' ? 'bg-yellow-100 text-yellow-800' :
-                                                            'bg-red-100 text-red-800'
-                                                        }`}>
-                                                            {h.status}
-                                                        </span>
+                                                    <td className="px-6 py-4 text-gray-600 text-sm" data-label="District">{h.district || 'Unassigned'}</td>
+                                                    <td className="px-6 py-4 text-center" data-label="Status">
+                                                        <div className="flex items-center justify-center gap-2 sm:justify-center">
+                                                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                                h.status === 'Normal' ? 'bg-green-100 text-green-800' :
+                                                                h.status === 'Low' ? 'bg-yellow-100 text-yellow-800' :
+                                                                'bg-red-100 text-red-800'
+                                                            }`}>
+                                                                {h.status}
+                                                            </span>
+                                                            <button 
+                                                                onClick={() => handleViewHospitalDetail(h)}
+                                                                className="p-1 text-gray-400 hover:text-primary transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                                                title="View detailed stock"
+                                                            >
+                                                                <Info size={16} />
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))
@@ -376,6 +413,80 @@ const filteredHospitals = hospitalsStock.filter(h => {
                     </div>
                 </div>
             </section>
+            
+            {/* Hospital Stock Detail Modal */}
+            {isModalOpen && selectedHospital && (
+                <div className="fixed inset-0 z-[1000] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setIsModalOpen(false)}></div>
+                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                        <div className="inline-block align-middle bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                <div className="sm:flex sm:items-start">
+                                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                        <Droplet className="h-6 w-6 text-red-600" aria-hidden="true" />
+                                    </div>
+                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                        <h3 className="text-lg leading-6 font-bold text-gray-900" id="modal-title">
+                                            {selectedHospital.name}
+                                        </h3>
+                                        <div className="mt-2">
+                                            <p className="text-sm text-gray-500 flex items-center gap-1">
+                                                <MapPin size={14} /> {selectedHospital.address}
+                                            </p>
+                                            {selectedHospital.phone && (
+                                                <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                                                    <PhoneCall size={14} /> {selectedHospital.phone}
+                                                </p>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="mt-6">
+                                            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">Live Inventory Breakdown</h4>
+                                            {detailLoading ? (
+                                                <div className="py-8 text-center text-gray-400">Loading inventory data...</div>
+                                            ) : hospitalDetail ? (
+                                                <div className="grid grid-cols-2 xs:grid-cols-4 gap-3">
+                                                    {hospitalDetail.map((item) => (
+                                                        <div key={item.bloodType} className={`flex flex-col items-center p-2 rounded border ${
+                                                            item.status === 'Normal' ? 'border-green-200 bg-green-50' :
+                                                            item.status === 'Low' ? 'border-yellow-200 bg-yellow-50' :
+                                                            'border-red-200 bg-red-50'
+                                                        }`}>
+                                                            <span className="text-xs font-bold text-gray-700">{item.bloodType}</span>
+                                                            <span className="text-lg font-bold text-gray-900">{item.units}</span>
+                                                            <span className="text-[10px] text-gray-500 uppercase">{item.status}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-red-500">Failed to load detailed stock information.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                <button
+                                    type="button"
+                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                                    onClick={() => setIsModalOpen(false)}
+                                >
+                                    Close
+                                </button>
+                                {selectedHospital.phone && (
+                                    <a
+                                        href={`tel:${selectedHospital.phone}`}
+                                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                                    >
+                                        Call Now
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Why Donate Section */}
             <section className="why-donate-section">

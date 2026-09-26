@@ -156,13 +156,9 @@ const AdminDashboard = () => {
       {loading && <p>Loading dashboard data...</p>}
 
       {!loading && activeTab === "overview" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div className="admin-overview-container">
           <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              marginBottom: "-10px",
-            }}
+            className="notifications-bar"
           >
             <button
               className="dashboard btn btn-outline"
@@ -213,11 +209,7 @@ const AdminDashboard = () => {
           </div>
 
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-              gap: "24px",
-            }}
+            className="admin-charts-grid"
           >
             <div className="card">
               <div className="card-header">

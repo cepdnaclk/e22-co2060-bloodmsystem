@@ -32,7 +32,7 @@ def _get_stock_status(total):
     """Return stock status label based on unit count."""
     if total < 10:
         return "Critical"
-    if total < 30:
+    if total < 50:
         return "Low"
     return "Normal"
 
@@ -107,6 +107,8 @@ def all_hospitals_stock(request):
             "id": h.id,
             "name": h.hosName,
             "district": h.district.districtName if h.district else None,
+            "address": h.address,
+            "phone": h.phone,
             "totalUnits": total_units,
             "status": _get_stock_status(total_units),
             "expiringSoon": expiring_soon,

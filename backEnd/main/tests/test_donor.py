@@ -18,7 +18,7 @@ User = get_user_model()
 class DonorWorkflowTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.country = Country.objects.create(countryName="Sri Lanka", countryCode="LK")
+        self.country = Country.objects.create(countryName="Sri Lanka")
         self.district = District.objects.create(districtName="Colombo", country=self.country)
 
         # Donor user
@@ -38,7 +38,6 @@ class DonorWorkflowTests(TestCase):
         )
         self.donor_details = DonorDetails.objects.create(
             user=self.donor_user,
-            is_eligible=True,
             total_donations=2
         )
 
@@ -58,11 +57,11 @@ class DonorWorkflowTests(TestCase):
             end_time="16:00",
             location="Viharamahadevi Park, Colombo",
             organizer=self.organizer_user,
-            district=self.district,
-            status="upcoming"
+            status="Upcoming"
         )
 
     def test_upcoming_blood_camps_public_api(self):
+        self.client.force_authenticate(user=self.donor_user)
         response = self.client.get("/api/v1/donor/camps/upcoming/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Should return a list containing the upcoming camp
@@ -75,7 +74,7 @@ class DonorWorkflowTests(TestCase):
         # Register for camp
         reg = CampRegistration.objects.create(
             camp=self.camp,
-            donor=self.donor_user,
+            donor=self.donor_details,
             status="registered"
         )
         self.assertEqual(reg.status, "registered")
@@ -92,10 +91,10 @@ class DonorWorkflowTests(TestCase):
 
     def test_donation_history_listing(self):
         DonationHistory.objects.create(
-            donor=self.donor_user,
-            blood_camp=self.camp,
+            donor=self.donor_details,
+            hospital_name="Test Hospital",
             donation_date=date.today() - timedelta(days=90),
-            units_donated=1,
+            units=1,
             blood_group="O+",
             status="completed"
         )
@@ -106,8 +105,7 @@ class DonorWorkflowTests(TestCase):
 
     def test_donor_alerts(self):
         alert = DonorAlert.objects.create(
-            donor=self.donor_user,
-            title="Urgent O+ Needed",
+            donor=self.donor_details,
             message="National blood bank has low stock for O+.",
             alert_type="urgent",
             is_read=False
@@ -118,7 +116,7 @@ class DonorWorkflowTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Mark read
-        read_response = self.client.post(f"/api/v1/donor/alerts/{alert.id}/read/")
+        read_response = self.client.patch(f"/api/v1/donor/alerts/{alert.id}/read/", {"is_read": True})
         self.assertEqual(read_response.status_code, status.HTTP_200_OK)
         alert.refresh_from_db()
         self.assertTrue(alert.is_read)

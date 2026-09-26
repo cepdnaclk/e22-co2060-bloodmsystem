@@ -940,6 +940,54 @@
     .map-mockup-wrapper {
         height: 300px;
     }
+
+    /* Hospital Stock Table Mobile */
+    .hospital-stock-wrapper .p-4 {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .hospital-stock-wrapper .flex.items-center.gap-3 {
+        flex-direction: column;
+    }
+
+    .hospital-stock-wrapper select,
+    .hospital-stock-wrapper .relative {
+        width: 100%;
+    }
+
+    .hospital-stock-wrapper table thead {
+        display: none; /* Hide headers on very small screens or use a card layout */
+    }
+
+    .hospital-stock-wrapper table, 
+    .hospital-stock-wrapper tbody, 
+    .hospital-stock-wrapper tr, 
+    .hospital-stock-wrapper td {
+        display: block;
+        width: 100%;
+    }
+
+    .hospital-stock-wrapper tr {
+        padding: 1rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .hospital-stock-wrapper td {
+        padding: 0.5rem 0;
+        text-align: left !important;
+        border: none !important;
+    }
+
+    .hospital-stock-wrapper td:before {
+        content: attr(data-label);
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        color: var(--color-text-muted);
+        display: block;
+        margin-bottom: 2px;
+    }
 }
 
 /* ═══════════════════════════════════════════════════════════
