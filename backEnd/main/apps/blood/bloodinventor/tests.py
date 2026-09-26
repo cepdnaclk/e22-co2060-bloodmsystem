@@ -30,12 +30,12 @@ class BloodInventoryUnitTests(TestCase):
         self.assertEqual(_get_stock_status(0), "Critical")
         self.assertEqual(_get_stock_status(9), "Critical")
 
-        # Low (< 30)
+        # Low (< 50)
         self.assertEqual(_get_stock_status(10), "Low")
-        self.assertEqual(_get_stock_status(29), "Low")
+        self.assertEqual(_get_stock_status(49), "Low")
 
-        # Normal (>= 30)
-        self.assertEqual(_get_stock_status(30), "Normal")
+        # Normal (>= 50)
+        self.assertEqual(_get_stock_status(50), "Normal")
         self.assertEqual(_get_stock_status(150), "Normal")
 
     def test_blood_types_list_completeness(self):
@@ -168,10 +168,10 @@ class BloodInventoryIntegrationTests(APITestCase):
         self.assertIn("stocks", payload)
         self.assertEqual(len(payload["stocks"]), 8)
 
-        # Verify O+ shows up with 45 units and Normal status
+        # Verify O+ shows up with 45 units and Low status (threshold is now 50)
         o_plus = next(item for item in payload["stocks"] if item["bloodType"] == "O+")
         self.assertEqual(o_plus["units"], 45)
-        self.assertEqual(o_plus["status"], "Normal")
+        self.assertEqual(o_plus["status"], "Low")
 
     def test_national_live_stock_public_access(self):
         """GET /api/v1/blood/national/live/ should be accessible without authentication."""

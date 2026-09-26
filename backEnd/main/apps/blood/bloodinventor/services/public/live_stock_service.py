@@ -12,7 +12,7 @@ BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
 def get_stock_status(total):
     if total < 10:
         return "Critical"
-    if total < 30:
+    if total < 50:
         return "Low"
     return "Normal"
 

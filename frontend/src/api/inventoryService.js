@@ -29,3 +29,12 @@ export const getAllHospitalsStock = async (filters = {}) => {
         return { success: false, error: error.response?.data || error.message };
     }
 };
+
+export const getHospitalStockDetail = async (hospitalId) => {
+    try {
+        const response = await inventoryAPI.get(`/hospital/${hospitalId}/stock/`);
+        return { success: true, data: response.data };
+    } catch (error) {
+        return { success: false, error: error.response?.data || error.message };
+    }
+};

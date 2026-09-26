@@ -286,12 +286,17 @@
 .table-responsive {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: var(--spacing-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  min-width: 600px;
 }
 
 .data-table th {
@@ -365,6 +370,62 @@
   color: var(--color-text-main);
   cursor: pointer;
   padding: var(--spacing-2);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.mobile-toggle:hover {
+  background-color: var(--color-secondary-light);
+}
+
+/* Inventory Page Responsive Helpers */
+.admin-inventory-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.inventory-header, .inventory-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.table-filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--color-border);
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.admin-overview-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.notifications-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -10px;
+}
+
+.admin-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
 }
 
 @media (max-width: 1024px) {
@@ -372,6 +433,7 @@
     position: fixed;
     height: 100vh;
     transform: translateX(-100%);
+    box-shadow: var(--shadow-lg);
   }
 
   .dashboard-sidebar.mobile-open {
@@ -388,9 +450,51 @@
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 35;
     display: none;
+    backdrop-filter: blur(2px);
   }
 
   .sidebar-overlay.active {
     display: block;
+  }
+
+  .dashboard-topbar {
+    padding: 0 var(--spacing-4);
+    height: 60px;
+  }
+
+  .dashboard-content {
+    padding: var(--spacing-4);
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-4);
+  }
+
+  .card-header {
+    padding: var(--spacing-3) var(--spacing-4);
+    gap: var(--spacing-3);
+  }
+
+  .topbar-actions span {
+    display: none;
+  }
+
+  .dashboard-home-button {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-page-subtitle {
+    display: none;
+  }
+
+  .dashboard-topbar-left {
+    gap: var(--spacing-2);
+  }
+
+  .dashboard-page-title {
+    font-size: 1.1rem;
   }
 }

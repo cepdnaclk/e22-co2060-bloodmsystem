@@ -58,16 +58,16 @@ const InventoryPage = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="admin-inventory-page">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="inventory-header">
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 700, margin: 0 }}>National Live Blood Stock</h2>
           <p className="text-muted" style={{ margin: '4px 0 0' }}>
             Real-time aggregate stock levels across blood banks • Last updated: {updatedAt}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="header-actions">
           <button 
             className="dashboard btn btn-outline" 
             onClick={refetch} 
@@ -80,7 +80,7 @@ const InventoryPage = () => {
       </div>
 
       {/* Overview Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+      <div className="stats-grid">
         <StatCard 
           title="Total Blood Units"
           value={`${totalUnits} Units`}
@@ -113,10 +113,10 @@ const InventoryPage = () => {
 
       {/* Live Inventory Table Card */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div className="card-header inventory-table-header">
           <h3 className="card-title" style={{ margin: 0 }}>Stock Breakdown by Blood Group</h3>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color, #e2e8f0)', padding: '6px 12px', borderRadius: '8px' }}>
+          <div className="table-filters">
+            <div className="search-box">
               <Search size={16} className="text-muted" />
               <input
                 type="text"
@@ -129,8 +129,7 @@ const InventoryPage = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="dashboard btn btn-outline"
-              style={{ padding: '6px 12px', borderRadius: '8px' }}
+              className="dashboard btn btn-outline status-select"
             >
               <option value="ALL">All Statuses</option>
               <option value="NORMAL">Normal</option>

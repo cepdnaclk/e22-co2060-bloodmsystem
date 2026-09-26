@@ -29,6 +29,14 @@
   box-shadow: var(--shadow-sm);
 }
 
+@media (max-width: 640px) {
+  .donor-welcome-card {
+    text-align: center;
+    justify-content: center;
+    padding: var(--spacing-6) var(--spacing-4);
+  }
+}
+
 .donor-welcome-info h2 {
   font-size: var(--font-size-xl);
   font-weight: 700;
@@ -60,6 +68,12 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--spacing-4);
   margin-bottom: var(--spacing-2);
+}
+
+@media (max-width: 480px) {
+  .donor-actions-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .donor-action-btn {
@@ -187,6 +201,12 @@
   padding: var(--spacing-2) 0;
 }
 
+@media (max-width: 480px) {
+  .donor-pass-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .donor-qr-wrapper {
   background-color: #ffffff;
   padding: var(--spacing-4);
@@ -257,6 +277,19 @@
   margin-bottom: var(--spacing-4);
 }
 
+@media (max-width: 640px) {
+  .donor-history-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .donor-pagination-bar {
+    flex-direction: column;
+    gap: var(--spacing-4);
+    text-align: center;
+  }
+}
+
 .donor-select-input {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -288,6 +321,13 @@
   gap: var(--spacing-5);
   margin-bottom: var(--spacing-6);
   flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .donor-profile-top {
+    flex-direction: column;
+    text-align: center;
+  }
 }
 
 .donor-avatar-container {
