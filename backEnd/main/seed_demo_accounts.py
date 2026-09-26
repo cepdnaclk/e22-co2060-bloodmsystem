@@ -50,7 +50,7 @@ ACCOUNTS = [
         "username": "campOrg",
         "email": "camp@hopedrop.com",
         "password": "CampPassword123!",
-        "full_name": "Red Cross Kandy Organizer",
+        "full_name": "Red Cross Organizer",
         "nic": "199212345678",
         "blood_group": "B+",
         "dashboard": "/bloodcamp"
@@ -60,7 +60,7 @@ ACCOUNTS = [
         "username": "invOfficer",
         "email": "inventory@hopedrop.com",
         "password": "InventoryPassword123!",
-        "full_name": "Chief Inventory Officer",
+        "full_name": "Inventory Officer",
         "nic": "198812345678",
         "blood_group": "AB+",
         "dashboard": "/inventory"

@@ -1,9 +1,6 @@
-# This theme is based on https://github.com/jekyll/minima
-# Please refer above link to know the available configurations
-
-title: ""
+title: "HopeDrop"
 remote_theme: cepdnaclk/eYY-project-theme
-description: ""
+description: "A centralized, digitized Blood Bank Management & Donation Tracking System for Sri Lanka"
 markdown: kramdown
 
 kramdown:
