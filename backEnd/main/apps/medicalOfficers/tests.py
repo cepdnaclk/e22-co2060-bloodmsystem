@@ -62,3 +62,6 @@ class MedicalOfficersUnitTests(TestCase):
         self.assertEqual(staff.employee_id, "EMP-2026-001")
         self.assertEqual(staff.designation, "TEC")
         self.assertEqual(staff.shift, "Morning")
+from tests.test_medical_officers import MedicalOfficersTests
+
+__all__ = ["MedicalOfficersTests"]

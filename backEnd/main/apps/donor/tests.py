@@ -167,3 +167,6 @@ class DonorIntegrationTests(APITestCase):
         self.assertTrue(len(response.data) >= 1)
         titles = [camp["title"] for camp in response.data]
         self.assertIn("Kandy Town Blood Drive", titles)
+from tests.test_donor import DonorWorkflowTests
+
+__all__ = ["DonorWorkflowTests"]

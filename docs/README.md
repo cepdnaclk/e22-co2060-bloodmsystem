@@ -37,69 +37,64 @@ Blood transfusion is a life-saving intervention, yet blood supply chains in Sri 
 
 **HopeDrop** addresses these challenges by providing a unified, cloud-hosted digital platform connecting donors, blood camp organizers, hospital staff, medical officers, and national administrators into a single real-time network.
 
+# Please update this with your repository name and project title
+repository-name: e22-co2060-Blood-Bank-management-System
+title: HopeDrop - Blood Bank Management System
 ---
 
-## 💡 Proposed Solution
+[comment]: # "This is the standard layout for the project, but you can clean this and use your own template, and add more information required for your own project"
 
-HopeDrop replaces fragmented paper logs with an automated digital workflow:
-- **Automated Donor Lifecycle:** Real-time eligibility calculator enforcing the 90-day Sri Lanka NBTS donation gap, personalized QR codes for camp check-in, and digital donation certificates.
-- **Camp-to-Hospital Supply Tracking:** End-to-end custody tracking of blood units from donation at mobile camps through transit to hospital blood bank intake.
-- **4-Stage Inventory Governance:** Multi-stage quality control approvals before newly received or adjusted blood stock is added to active inventory.
-- **Emergency Priority Requests:** Multi-level urgency requests (Normal, High, Critical) with automated hospital inventory deductions upon fulfillment.
-- **Predictive Expiry Alerts:** Daily automated background monitors flagging units nearing expiry ($\le 7$ days) and critical expiry ($\le 3$ days).
-
----
-
-## 🔑 Key Features by Role
-
-| Role | Key Capabilities |
-| :--- | :--- |
-| **🩸 Blood Donor** | Sign up, personalized QR pass, NBTS 90-day eligibility tracker, camp registration, donation history, and urgent alerts. |
-| **🏥 Medical Officer (Doctor)** | Submit urgent & routine blood requests, track real-time fulfillment status, and monitor local hospital stock. |
-| **⛺ Camp Organizer** | Schedule camps, scan donor QR codes at registration, manage pre-donation medical screening, and dispatch collections. |
-| **🔬 Inventory Officer** | Receive in-transit blood collections from camps, perform lab quality verification, and execute stock adjustments. |
-| **👑 System Administrator** | National cross-hospital inventory dashboard, hospital & staff management, and system-wide audit analytics. |
+# HopeDrop - Blood Bank Management System
 
 ---
 
-## 🏗️ System Architecture & Tech Stack
+![Project Cover](./data/cover_page.jpg)
 
-```
-   ┌────────────────────────────────────────────────────────┐
-   │              React 19 + Vite 7 (Vercel)                │
-   │   TailwindCSS • Recharts • Leaflet Maps • Lucide Icons │
-   └──────────────────────────┬─────────────────────────────┘
-                              │ REST API (JSON / JWT)
-   ┌──────────────────────────▼─────────────────────────────┐
-   │            Django 5.2 + DRF 3.16 (Render)              │
-   │  SimpleJWT (Rotation & Blacklist) • WhiteNoise • Brevo │
-   └──────────────────────────┬─────────────────────────────┘
-                              │ SSL Encrypted TCP
-   ┌──────────────────────────▼─────────────────────────────┐
-   │          Neon Serverless PostgreSQL (Cloud)            │
-   │          Automated migrations • Pooled Compute         │
-   └────────────────────────────────────────────────────────┘
-```
+## Team
+- E/22/032, K. Dulaj Ashen, [e22032@eng.pdn.ac.lk](mailto:e22032@eng.pdn.ac.lk)
+- E/22/203, R.M.S.S. Kumara, [e22203@eng.pdn.ac.lk](mailto:e22203@eng.pdn.ac.lk)
+- E/22/269, Hasara Panchani, [e22269@eng.pdn.ac.lk](mailto:e22269@eng.pdn.ac.lk)
+- E/22/353, Gayasha Sandeepa, [e22353@eng.pdn.ac.lk](mailto:e22353@eng.pdn.ac.lk)
 
-- **Frontend:** React 19, Vite 7, React Router DOM v7, Axios, TailwindCSS, Recharts, Leaflet.
-- **Backend:** Python 3.11, Django 5.2, Django REST Framework, SimpleJWT, Gunicorn, WhiteNoise.
-- **Database:** Serverless PostgreSQL on **Neon** (Production) / SQLite (Local Dev).
-- **Hosting:** **Vercel** (Frontend SPA) + **Render** (Backend WSGI Service).
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Solution Architecture](#solution-architecture)
+3. [Features](#features)
+4. [Technology Stack](#technology-stack)
+5. [Links](#links)
 
 ---
 
 ## 🧪 Testing & Quality Assurance
 
-The platform includes an automated testing suite verifying data integrity, cryptographic authentication, and role authorization:
+HopeDrop is a comprehensive web-based Blood Bank Management System designed to streamline blood donation, inventory management, and hospital coordination. The system addresses the critical challenge of blood supply shortages by connecting blood banks, hospitals, donors, and medical professionals through a unified digital platform. It enables real-time blood inventory tracking, efficient donor management, automated camp scheduling, and inter-hospital blood transfer coordination. By digitizing the traditionally manual processes of blood banking, HopeDrop reduces response times during emergencies, minimizes blood wastage, and ensures timely availability of the right blood type for patients in need.
 
-```bash
-python manage.py test apps.UserAuth apps.blood.bloodinventor apps.donor apps.medicalOfficers apps.adminDashboard
-```
+## Solution Architecture
 
-- **Unit Testing (16 Tests):** Validates Sri Lanka NIC regex (12-digit & 9-digit+V/X formats), NBTS 90-day donation interval calculations, and stock threshold logic.
-- **Integration Testing (12 Tests):** Validates user registration, JWT token rotation, token blacklisting on logout, and camp donation state machines.
-- **Security / RBAC Testing (6 Tests):** Verifies role boundaries, preventing donors or unauthenticated users from accessing national dashboards or admin statistics.
-- **Result:** **34 / 34 Tests Passing (100% pass rate).**
+The system follows a three-tier client-server architecture:
+- **Frontend**: React.js single-page application
+- **Backend**: Node.js/Express.js RESTful API
+- **Database**: MongoDB for flexible document storage
+
+Key roles supported: Donors, Lab Technicians, Doctors, Blood Camp Coordinators, Hospital Admins, and System Admins.
+
+## Features
+
+- Real-time blood inventory tracking by blood type and expiry
+- Donor registration, scheduling and history management
+- Blood camp organization and volunteer coordination
+- Inter-hospital blood transfer requests and approvals
+- Doctor and lab technician dashboards for patient requests
+- Automated alerts for low stock and expiring units
+- Secure role-based access control for all user types
+
+## Technology Stack
+
+- **Frontend**: React.js, HTML5, CSS3
+- **Backend**: Node.js, Express.js
+- **Database**: MongoDB
+- **Authentication**: JWT
+- **Deployment**: GitHub, Docker
 
 ---
 

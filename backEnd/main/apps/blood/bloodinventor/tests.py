@@ -207,3 +207,6 @@ class BloodInventoryIntegrationTests(APITestCase):
         self.assertIn("nationalStock", response.data)
         self.assertIn("alertSummary", response.data)
         self.assertEqual(response.data["totalUnits"], 45)
+from tests.test_blood_inventory import BloodInventoryTests
+
+__all__ = ["BloodInventoryTests"]

@@ -38,7 +38,7 @@ const ROLE_CONFIG = {
     admin: {
         label: 'System Administrator',
         dashboard: '/admin',
-        allowedRoutes: ['/admin', '/staff', '/doctor', '/donor', '/patient', '/events'],
+        allowedRoutes: ['/admin', '/staff', '/doctor', '/donor', '/events'],
         navItems: [
             { path: '/doctor',  label: 'Medical',  icon: 'Activity' },
             { path: '/staff',   label: 'Lab',      icon: 'ClipboardList' },
@@ -49,7 +49,7 @@ const ROLE_CONFIG = {
     medical_officer: {
         label: 'Medical Officer',
         dashboard: '/doctor',
-        allowedRoutes: ['/doctor', '/patient', '/events'],
+        allowedRoutes: ['/doctor', '/events'],
         navItems: [
             { path: '/doctor',  label: 'Medical',  icon: 'Activity' },
         ],
