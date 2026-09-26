@@ -37,10 +37,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         if data["password"] != data["password2"]:
             raise serializers.ValidationError("Passwords do not match.")
 
-        # Public signup must never create adminDashboard accounts.
-        if data.get("role") == User.ADMIN:
+        # Public signup must only allow donor and bloodcamp organizer accounts.
+        role = data.get("role", User.DONOR)
+        if role not in [User.DONOR, User.BLOODCAMP]:
             raise serializers.ValidationError(
-                {"role": "Admin accounts can only be created by system administrators."}
+                {"role": "Only Donor and Blood Camp Organizer accounts can be registered publicly."}
             )
 
         if User.objects.filter(username=data["username"]).exists():

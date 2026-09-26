@@ -112,7 +112,7 @@ const CampBloodTrackingPage = () => {
                     </p>
                 </div>
                 <div className="search-filter-box">
-                    <Search size={16} className="search-filter-icon" />
+                    <Search size={18} className="search-filter-icon" />
                     <input
                         type="text"
                         placeholder="Search camps or hospitals..."

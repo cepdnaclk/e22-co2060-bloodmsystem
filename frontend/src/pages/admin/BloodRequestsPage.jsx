@@ -103,14 +103,25 @@ const BloodRequestsPage = () => {
                     </h1>
                     <p className="text-muted text-sm">Review and fulfill blood requests from regional medical officers.</p>
                 </div>
-                <div style={{ position: 'relative' }}>
-                    <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                <div style={{ position: 'relative', width: '100%', maxWidth: '320px' }}>
+                    <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
                     <input
                         type="text"
                         placeholder="Search requests..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{ padding: '6px 12px 6px 32px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', outline: 'none' }}
+                        style={{
+                            width: '100%',
+                            padding: '9px 14px 9px 38px',
+                            fontSize: 'var(--font-size-sm)',
+                            backgroundColor: 'var(--color-surface)',
+                            color: 'var(--color-text-main)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius-md)',
+                            outline: 'none',
+                            boxShadow: 'var(--shadow-sm)',
+                            transition: 'all var(--transition-fast)'
+                        }}
                     />
                 </div>
             </div>

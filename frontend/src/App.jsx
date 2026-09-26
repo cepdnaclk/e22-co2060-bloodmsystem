@@ -61,16 +61,6 @@ function App() {
               <Route path="/blood-camps" element={<BloodCamps />} />
               <Route path="/donor/scan/:qrId" element={<PublicDonorScan />} />
 
-              <Route path="/donor" element={
-                <RoleRoute allowedRoles={['donor', 'admin']}>
-                  <DonorDashboard />
-                </RoleRoute>
-              } />
-              <Route path="/donor/notifications" element={
-                <RoleRoute allowedRoles={['donor', 'admin']}>
-                  <DonorNotifications />
-                </RoleRoute>
-              } />
               <Route path="/donor/eligibility" element={<DonorEligibility />} />
               <Route path="/donor/register" element={
                 <RoleRoute allowedRoles={['donor', 'admin']}>
@@ -87,6 +77,17 @@ function App() {
             </Route>
 
             {/* Standalone Dashboards (No Main Navbar) */}
+            <Route path="/donor" element={
+              <RoleRoute allowedRoles={['donor', 'admin']}>
+                <DonorDashboard />
+              </RoleRoute>
+            } />
+            <Route path="/donor/notifications" element={
+              <RoleRoute allowedRoles={['donor', 'admin']}>
+                <DonorNotifications />
+              </RoleRoute>
+            } />
+
             <Route path="/doctor" element={
               <RoleRoute allowedRoles={['doctor', 'medical_officer', 'admin']}>
                 <DoctorDashboard />

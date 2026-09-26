@@ -3,6 +3,7 @@ import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import Swal from 'sweetalert2';
 import { AuthContext } from './auth/AuthContext';
+import { API_BASE_URL } from '../config/apiConfig';
 
 const normalizeRole = (role) => {
     if (!role) return null;
@@ -88,7 +89,7 @@ export const AuthProvider = ({ children }) => {
         }
 
         try {
-            const response = await axios.post('http://localhost:8000/api/v1/auth/token/refresh/', {
+            const response = await axios.post(`${API_BASE_URL.replace(/\/$/, '')}/auth/token/refresh/`, {
                 refresh: tokens.refresh,
             });
 
@@ -170,7 +171,7 @@ export const AuthProvider = ({ children }) => {
     // ────────────────────────────────────────────────────────
 
     const login = async (identifier, password) => {
-        const response = await axios.post('http://localhost:8000/api/v1/auth/token/', {
+        const response = await axios.post(`${API_BASE_URL.replace(/\/$/, '')}/auth/token/`, {
             email: identifier,
             password,
         });

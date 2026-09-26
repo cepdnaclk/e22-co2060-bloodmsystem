@@ -50,8 +50,8 @@ const HospitalManagement = () => {
 
     return (
         <div style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-main)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '20px', flexWrap: 'wrap' }}>
+                <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--color-text-main)', margin: 0 }}>
                     <Building size={24} /> Hospital Management
                 </h2>
                 <button 
