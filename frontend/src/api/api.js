@@ -1,8 +1,10 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/v1/', // Your Django API base URL
+  baseURL: API_BASE_URL,
 });
+
 
 // Automatically add JWT token to headers
 api.interceptors.request.use(
@@ -88,6 +90,12 @@ api.interceptors.response.use(
         isRefreshing = false;
         flushRefreshQueue(null);
         localStorage.removeItem('authTokens');
+
+        // Redirect to login page — session has fully expired
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+
         return Promise.reject(refreshError);
       }
     }

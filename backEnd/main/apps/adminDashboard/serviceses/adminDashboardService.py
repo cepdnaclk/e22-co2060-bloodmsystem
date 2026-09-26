@@ -1,4 +1,5 @@
-from django.db.models import Sum
+from django.db.models import Count, Sum
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -7,10 +8,12 @@ from rest_framework.response import Response
 from apps.UserAuth.models.models import User
 from apps.donor.models.bloodCamp import BloodCamp
 from apps.donor.models.donorDetails import DonorDetails
+from apps.donor.models.campRegistration import CampRegistration
 from apps.UserAuth.models.hospital import Hospital
 from apps.blood.bloodinventor.models.bloodinventor import BloodInventory
 from apps.blood.bloodinventor.models.bloodRequest import BloodRequest
 from apps.donor.models.donationHistory import DonationHistory
+from apps.medicalOfficers.models.hospitalStaff import StaffProfile
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -24,13 +27,35 @@ def get_admin_dashboard_stats(request):
     total_units = total_units_agg['total'] or 0
     pending_requests = BloodRequest.objects.filter(status=BloodRequest.Status.PENDING).count()
     approved_donations = DonationHistory.objects.filter(status="completed").count()
+    workflow_counts_qs = CampRegistration.objects.values("status").annotate(count=Count("id"))
+    workflow_status_counts = {row["status"]: row["count"] for row in workflow_counts_qs}
+    today = timezone.now().date()
+    today_donated_count = CampRegistration.objects.filter(status="donated", collected_at__date=today).count()
+    rejection_reasons = (
+        CampRegistration.objects.filter(status="rejected")
+        .exclude(rejection_reason="")
+        .values("rejection_reason")
+        .annotate(count=Count("id"))
+        .order_by("-count")[:5]
+    )
+
+    total_staff = StaffProfile.objects.count()
+    total_donors = User.objects.filter(role=User.DONOR).count()
+    total_users = User.objects.count()
 
     return Response({
+        "total_staff": total_staff,
         "total_doctors": total_doctors,
+        "total_donors": total_donors,
+        "total_users": total_users,
         "total_hospitals": total_hospitals,
         "total_units": total_units,
+        "total_inventory_units": total_units,
         "pending_requests": pending_requests,
-        "approved_donations": approved_donations
+        "approved_donations": approved_donations,
+        "workflow_status_counts": workflow_status_counts,
+        "today_donated_count": today_donated_count,
+        "rejection_reason_summary": list(rejection_reasons),
     })
 
 @api_view(['GET'])

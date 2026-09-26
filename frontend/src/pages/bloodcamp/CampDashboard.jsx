@@ -1,293 +1,552 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getOrganizerCamps, createBloodCamp, getCampRegistrations, approveCampRegistration, completeCampRegistration } from '../../services/campService';
-import { LayoutDashboard, Users, Calendar, MapPin, Clock, Plus, CheckCircle, LogOut, User, Activity } from 'lucide-react';
+import {
+  completeCampRegistration,
+  createBloodCamp,
+  getCampRegistrations,
+  getOrganizerCamps,
+  getWorkflowNotifications,
+  markRegistrationArrived,
+  markWorkflowNotificationRead,
+  sendRegistrationToScreening,
+  getOrganizerDonatedHistory,
+  getCampCollections,
+  dispatchCampBlood
+} from '../../services/campService';
+import { getAllHospitalsStock } from '../../api/inventoryService';
+import { 
+  LayoutDashboard, Calendar, MapPin, Clock, Plus, CheckCircle, 
+  LogOut, User, Activity, Bell, Settings, History, Droplet, 
+  Users, AlertTriangle, CalendarDays, ClipboardList, Truck
+} from 'lucide-react';
 import { useAuth } from '../../context/auth/useAuth';
 import Swal from 'sweetalert2';
-import './CampDashboard.css';
+import api from '../../api/api';
+import '../bloodcamp/BloodCamps.css';
+
+import DashboardLayout from '../../components/layout/DashboardLayout';
+import StatCard from '../../components/ui/StatCard';
+import DataTable from '../../components/ui/DataTable';
+import StatusBadge from '../../components/ui/StatusBadge';
 
 const CampDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [camps, setCamps] = useState([]);
   const [selectedCamp, setSelectedCamp] = useState(null);
   const [registrations, setRegistrations] = useState([]);
-  const [view, setView] = useState('camps'); // 'camps' or 'create'
-  
-  // New Camp Form
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [profileData, setProfileData] = useState(null);
+  const [processingRegistrationId, setProcessingRegistrationId] = useState(null);
+  const [donatedHistory, setDonatedHistory] = useState([]);
+
+  const [hospitals, setHospitals] = useState([]);
+  const [campCollections, setCampCollections] = useState([]);
+
   const [newCamp, setNewCamp] = useState({
-    title: '', date: '', start_time: '', end_time: '', location: '', description: ''
+    title: '',
+    date: '',
+    start_time: '',
+    end_time: '',
+    location: '',
+    description: '',
+    destination_hospital: '',
   });
 
-  const loadCamps = async () => {
+  const groupedRegistrations = useMemo(() => ({
+    registered: registrations.filter((r) => r.status === 'registered'),
+    arrived: registrations.filter((r) => r.status === 'arrived'),
+    screening: registrations.filter((r) => r.status === 'screening'),
+    approved: registrations.filter((r) => r.status === 'approved'),
+    rejected: registrations.filter((r) => r.status === 'rejected'),
+    donated: registrations.filter((r) => r.status === 'donated'),
+  }), [registrations]);
+
+  const loadProfile = async () => {
     try {
-      const data = await getOrganizerCamps();
-      setCamps(data);
-    } catch (err) {
-      console.error("Error loading camps:", err);
+      const response = await api.get('auth/profile/');
+      setProfileData(response.data);
+    } catch {
+      setProfileData(null);
     }
   };
 
+  const loadCamps = async () => {
+    const data = await getOrganizerCamps();
+    setCamps(data);
+  };
+
   const loadRegistrations = async (campId) => {
-      try {
-          const data = await getCampRegistrations(campId);
-          setRegistrations(data);
-      } catch (err) {
-          console.error("Error loading registrations:", err);
+    const data = await getCampRegistrations(campId);
+    setRegistrations(data);
+  };
+
+  const loadNotifications = async () => {
+    const data = await getWorkflowNotifications();
+    setNotifications(Array.isArray(data) ? data : []);
+  };
+  
+  const loadDonatedHistory = async () => {
+    const data = await getOrganizerDonatedHistory();
+    setDonatedHistory(data);
+  };
+
+  const loadHospitals = async () => {
+    const { success, data } = await getAllHospitalsStock();
+    if (success && data.hospitals) {
+      setHospitals(data.hospitals);
+    }
+  };
+
+  const loadAll = async () => {
+    try {
+      setLoading(true);
+      await Promise.all([loadProfile(), loadCamps(), loadNotifications(), loadDonatedHistory(), loadHospitals()]);
+      if (selectedCamp?.id) {
+        await loadRegistrations(selectedCamp.id);
+        const collData = await getCampCollections(selectedCamp.id);
+        setCampCollections(collData.collections || []);
       }
+    } catch (error) {
+      Swal.fire('Error', error.response?.data?.detail || 'Failed to load camp dashboard data.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadCamps();
-    
-    // Live update polling
+    loadAll();
     const intervalId = setInterval(() => {
-        loadCamps();
-        // Also poll registrations if a camp is currently selected
-        if (selectedCamp) {
-            loadRegistrations(selectedCamp.id);
-        }
-    }, 10000); // 10 seconds
-
+      loadAll();
+    }, 8000);
     return () => clearInterval(intervalId);
-  }, [selectedCamp]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCamp?.id]);
 
   const handleCreateCamp = async (e) => {
     e.preventDefault();
     try {
       await createBloodCamp(newCamp);
-      Swal.fire('Success', 'Blood Camp Created!', 'success');
-      setView('camps');
-      loadCamps();
-      setNewCamp({ title: '', date: '', start_time: '', end_time: '', location: '', description: '' });
-    } catch (err) {
-      Swal.fire('Error', 'Failed to create camp', 'error');
+      Swal.fire('Success', 'Blood Camp created.', 'success');
+      setActiveTab('dashboard');
+      setNewCamp({ title: '', date: '', start_time: '', end_time: '', location: '', description: '', destination_hospital: '' });
+      await loadCamps();
+    } catch (error) {
+      Swal.fire('Error', error.response?.data?.detail || 'Failed to create camp.', 'error');
     }
   };
 
   const handleViewRegistrations = async (camp) => {
     setSelectedCamp(camp);
     await loadRegistrations(camp.id);
-  };
-
-  const handleApprove = async (reg) => {
-    const { value: time } = await Swal.fire({
-      title: 'Set Appointment Time',
-      input: 'time',
-      inputLabel: 'Time for donor to arrive',
-      inputPlaceholder: 'Select time',
-      showCancelButton: true
-    });
-
-    if (time) {
-      try {
-        await approveCampRegistration(reg.id, time);
-        Swal.fire('Approved!', 'Donor has been notified.', 'success');
-        loadRegistrations(selectedCamp.id); // refresh
-      } catch (err) {
-        Swal.fire('Error', 'Approval failed.', 'error');
-      }
+    try {
+      const collData = await getCampCollections(camp.id);
+      setCampCollections(collData.collections || []);
+    } catch (err) {
+      console.error("Failed to load collections", err);
     }
   };
 
-  const handleCompleteDonation = async (reg) => {
-      try {
-          const result = await Swal.fire({
-              title: 'Mark as Donated?',
-              text: `Confirm that ${reg.donor_name} has successfully donated blood.`,
-              icon: 'question',
-              showCancelButton: true,
-              confirmButtonText: 'Yes, Complete',
-              confirmButtonColor: '#10b981'
-          });
-
-          if (result.isConfirmed) {
-              await completeCampRegistration(reg.id);
-              Swal.fire('Completed!', 'Donation recorded successfully.', 'success');
-              loadRegistrations(selectedCamp.id); // refresh
-          }
-      } catch (err) {
-          Swal.fire('Error', 'Failed to mark as complete.', 'error');
-      }
+  const handleDispatchBlood = async () => {
+    try {
+      const res = await dispatchCampBlood(selectedCamp.id);
+      Swal.fire('Dispatched', res.detail, 'success');
+      const collData = await getCampCollections(selectedCamp.id);
+      setCampCollections(collData.collections || []);
+    } catch (error) {
+      Swal.fire('Error', error.response?.data?.error || error.response?.data?.detail || 'Failed to dispatch', 'error');
+    }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const runRegistrationAction = async (registrationId, action) => {
+    try {
+      setProcessingRegistrationId(registrationId);
+      if (action === 'arrive') await markRegistrationArrived(registrationId);
+      if (action === 'screening') await sendRegistrationToScreening(registrationId);
+      if (action === 'donated') await completeCampRegistration(registrationId);
+      await loadRegistrations(selectedCamp.id);
+    } catch (error) {
+      Swal.fire('Action Failed', error.response?.data?.detail || 'Could not update donor status.', 'error');
+    } finally {
+      setProcessingRegistrationId(null);
+    }
   };
+
+  const handleWorkflowNotifications = async () => {
+    const html = notifications.length
+      ? `<div style="text-align:left;max-height:300px;overflow:auto;">${notifications.map(
+          (n) => `<div style="padding:10px 0;border-bottom:1px solid var(--color-border);">
+                    <strong style="color:var(--color-critical);">${n.event_type}</strong><br/>
+                    <span style="color:var(--color-text-main);">${n.message}</span><br/>
+                    <small style="color:var(--color-text-muted);">${new Date(n.created_at).toLocaleString()}</small>
+                  </div>`
+        ).join('')}</div>`
+      : '<p style="color:var(--color-text-muted);">No notifications.</p>';
+    await Swal.fire({ title: 'Workflow Notifications', html, width: 700 });
+    await Promise.all(notifications.filter((n) => !n.is_read).map((n) => markWorkflowNotificationRead(n.id)));
+    await loadNotifications();
+  };
+
+  const profileUser = profileData?.user || {};
+  const profile = profileData?.profile || {};
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  const menuItems = [
+    { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Overview', onClick: () => setSelectedCamp(null) },
+    { id: 'history', icon: <History size={20} />, label: 'Donated History', onClick: () => setSelectedCamp(null) },
+    { id: 'create', icon: <Plus size={20} />, label: 'Create Camp' },
+    { id: 'profile', icon: <Settings size={20} />, label: 'Settings', onClick: () => setSelectedCamp(null) },
+  ];
+
+  const headerActions = (
+    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+      <div style={{ position: 'relative', cursor: 'pointer' }} onClick={handleWorkflowNotifications}>
+        <Bell size={24} style={{ color: 'var(--color-text-main)' }} />
+        {unreadCount > 0 && (
+          <span style={{ position: 'absolute', top: -5, right: -5, background: 'var(--color-critical)', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {unreadCount}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderContent = () => {
+    if (activeTab === 'create') {
+      return (
+        <div className="form-container">
+          <h2>Create New Blood Camp</h2>
+          <form onSubmit={handleCreateCamp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label>Camp Title</label>
+              <input type="text" required value={newCamp.title} onChange={e => setNewCamp({ ...newCamp, title: e.target.value })} placeholder="e.g. Summer Blood Drive" />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label>Date</label>
+                <input type="date" required value={newCamp.date} onChange={e => setNewCamp({ ...newCamp, date: e.target.value })} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label>Start Time</label>
+                <input type="time" required value={newCamp.start_time} onChange={e => setNewCamp({ ...newCamp, start_time: e.target.value })} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label>End Time</label>
+                <input type="time" required value={newCamp.end_time} onChange={e => setNewCamp({ ...newCamp, end_time: e.target.value })} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label>Location</label>
+              <input type="text" required value={newCamp.location} onChange={e => setNewCamp({ ...newCamp, location: e.target.value })} placeholder="Full Address / Venue" />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label>Destination Hospital</label>
+              <select required value={newCamp.destination_hospital} onChange={e => setNewCamp({ ...newCamp, destination_hospital: e.target.value })} style={{ padding: '8px', borderRadius: '4px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
+                <option value="">Select destination hospital...</option>
+                {hospitals.map(h => (
+                  <option key={h.id} value={h.id}>{h.name} - {h.district}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label>Description</label>
+              <textarea rows="3" value={newCamp.description} onChange={e => setNewCamp({ ...newCamp, description: e.target.value })} />
+            </div>
+            <button type="submit" className="dashboard btn btn-primary" style={{ padding: '12px', marginTop: '10px' }}>Publish Camp</button>
+          </form>
+        </div>
+      );
+    }
+
+    if (activeTab === 'history') {
+      return (
+        <DataTable 
+          columns={['Donor Name', 'Blood Group', 'Camp Location', 'Date', 'Status']}
+          data={donatedHistory}
+          emptyMessage="No donation records yet."
+          renderRow={(record) => (
+            <tr key={record.id}>
+              <td>{record.donor_name}</td>
+              <td><StatusBadge status={record.blood_group || 'N/A'} /></td>
+              <td>{record.camp_location}</td>
+              <td>{new Date(record.donated_at).toLocaleDateString()}</td>
+              <td><StatusBadge status="completed" /></td>
+            </tr>
+          )}
+        />
+      );
+    }
+
+    if (activeTab === 'profile') {
+      return (
+        <div className="form-container">
+          <h2>Organizer Profile</h2>
+          <div style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+            <div>
+              <label>Full Name</label>
+              <input type="text" value={profile?.fullName || profileUser?.username || ''} readOnly />
+            </div>
+            <div>
+              <label>Email Address</label>
+              <input type="email" value={profileUser?.email || user?.email || ''} readOnly />
+            </div>
+            <div>
+              <label>Phone</label>
+              <input type="text" value={profile?.phoneNumber || 'N/A'} readOnly />
+            </div>
+            <div>
+              <label>Role</label>
+              <input type="text" value={profileUser?.role || user?.role || ''} readOnly style={{ textTransform: 'capitalize' }} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Default: 'dashboard' tab
+    if (selectedCamp) {
+      return (
+        <div>
+          <button 
+            className="dashboard btn btn-outline" 
+            onClick={() => setSelectedCamp(null)}
+            style={{ marginBottom: '20px' }}
+          >
+            ← Back to Camps
+          </button>
+          
+          {/* Camp Details Section */}
+          <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+            <h2 style={{ margin: '0 0 16px 0', color: 'var(--color-text-main)' }}>{selectedCamp.title} - Details</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 'bold', marginBottom: '4px' }}>Date</span>
+                <span style={{ color: 'var(--color-text-main)' }}>{new Date(selectedCamp.date).toLocaleDateString()}</span>
+              </div>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 'bold', marginBottom: '4px' }}>Time</span>
+                <span style={{ color: 'var(--color-text-main)' }}>{selectedCamp.start_time} - {selectedCamp.end_time}</span>
+              </div>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 'bold', marginBottom: '4px' }}>Location</span>
+                <span style={{ color: 'var(--color-text-main)' }}>{selectedCamp.location}</span>
+              </div>
+            </div>
+          </div>
+
+          <h3 style={{ marginBottom: '16px', color: 'var(--color-text-main)' }}>Donor Workflow</h3>
+          
+          <div style={{ marginBottom: '20px', color: 'var(--color-text-muted)', fontSize: '0.92rem', padding: '12px', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+            <strong>Summary:</strong>{' '}
+            Registered <StatusBadge status={groupedRegistrations.registered.length.toString()} /> • 
+            Arrived <StatusBadge status={groupedRegistrations.arrived.length.toString()} /> • 
+            Screening <StatusBadge status={groupedRegistrations.screening.length.toString()} /> • 
+            Approved <StatusBadge status={groupedRegistrations.approved.length.toString()} /> • 
+            Rejected <StatusBadge status={groupedRegistrations.rejected.length.toString()} /> • 
+            Donated <StatusBadge status={groupedRegistrations.donated.length.toString()} />
+          </div>
+
+          <DataTable 
+            columns={['Donor Name', 'Blood Group', 'Phone', 'Status', 'Actions']}
+            data={registrations}
+            emptyMessage="No donor registrations yet."
+            renderRow={(reg) => (
+              <tr key={reg.id}>
+                <td>{reg.donor_name}</td>
+                <td><StatusBadge status={reg.donor_blood_group || 'N/A'} /></td>
+                <td>{reg.donor_phone || 'N/A'}</td>
+                <td>
+                  <StatusBadge status={reg.status} />
+                  {reg.rejection_reason && (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: 4 }}>Reason: {reg.rejection_reason}</div>
+                  )}
+                  {reg.collected_at && (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: 4 }}><Clock size={12} style={{ display: 'inline' }} /> {new Date(reg.collected_at).toLocaleString()}</div>
+                  )}
+                </td>
+                <td>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {reg.status === 'registered' && (
+                      <button onClick={() => runRegistrationAction(reg.id, 'arrive')} className="dashboard btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }} disabled={processingRegistrationId === reg.id}>
+                        <CheckCircle size={14} /> Mark Arrived
+                      </button>
+                    )}
+                    {reg.status === 'arrived' && (
+                      <button onClick={() => runRegistrationAction(reg.id, 'screening')} className="dashboard btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--color-info)', color: 'white', border: 'none' }} disabled={processingRegistrationId === reg.id}>
+                        <Activity size={14} /> To Screening
+                      </button>
+                    )}
+                    {reg.status === 'approved' && (
+                      <button onClick={() => runRegistrationAction(reg.id, 'donated')} className="dashboard btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--color-success)', color: 'white', border: 'none' }} disabled={processingRegistrationId === reg.id}>
+                        <Droplet size={14} /> Complete Donation
+                      </button>
+                    )}
+                    {(reg.status === 'screening' || reg.status === 'rejected' || reg.status === 'donated') && (
+                      <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>No action available</span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            )}
+          />
+
+          {/* Blood Dispatch Section */}
+          <h3 style={{ margin: '32px 0 16px 0', color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Truck size={20} /> Blood Collections & Dispatch
+          </h3>
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', margin: 0 }}>
+              Dispatch collected blood units to {selectedCamp.destination_hospital_name || 'the destination hospital'}.
+            </p>
+            <button 
+              className="dashboard btn btn-primary" 
+              onClick={handleDispatchBlood}
+              disabled={campCollections.filter(c => c.status === 'collected').length === 0}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Truck size={16} /> Dispatch Collected Blood
+            </button>
+          </div>
+          <DataTable 
+            columns={['Donor', 'Blood Group', 'Units', 'Status', 'Hospital']}
+            data={campCollections}
+            emptyMessage="No blood collected yet. Complete donor registrations first."
+            renderRow={(c) => (
+              <tr key={c.id}>
+                <td>{c.donorName}</td>
+                <td><span className="blood-type-circle" style={{ width: '32px', height: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', backgroundColor: 'var(--color-critical-bg)', color: 'var(--color-critical)', fontWeight: 'bold', fontSize: '0.85rem' }}>{c.bloodType}</span></td>
+                <td>{c.units}</td>
+                <td><StatusBadge status={c.status} /></td>
+                <td>{c.destinationHospital ? c.destinationHospital.name : '-'}</td>
+              </tr>
+            )}
+          />
+        </div>
+      );
+    }
+
+    // Dashboard Overview
+    const upcomingCampsCount = camps.filter(c => new Date(c.date) >= new Date()).length;
+    
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className="stats-grid">
+          <StatCard 
+            title="Total Units Collected" 
+            value="4,520" 
+            Icon={Droplet} 
+            colorClass="text-primary"
+            trend="+12% from last month"
+          />
+          <StatCard 
+            title="Active Donors" 
+            value="245" 
+            Icon={Users} 
+            colorClass="text-info"
+            trend="Registered this week"
+          />
+          <StatCard 
+            title="Critical Stock" 
+            value="O- (20%)" 
+            Icon={AlertTriangle} 
+            colorClass="text-warning"
+            trend="Action Required"
+          />
+          <StatCard 
+            title="Upcoming Camps" 
+            value={upcomingCampsCount} 
+            Icon={CalendarDays} 
+            colorClass="text-success"
+            trend="Scheduled this month"
+          />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+              <h2 style={{ color: 'var(--color-text-main)', margin: 0 }}>Your Camps</h2>
+              <button className="dashboard btn btn-primary" onClick={() => setActiveTab('create')} style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' }}>
+                <Plus size={16} /> Schedule Camp
+              </button>
+            </div>
+            
+            {camps.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--color-border)' }}>
+                <CalendarDays size={48} style={{ color: 'var(--color-border)', marginBottom: '16px' }} />
+                <p style={{ color: 'var(--color-text-muted)', marginBottom: '16px' }}>No camps organized yet.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+                {camps.map(camp => (
+                  <div key={camp.id} style={{ backgroundColor: 'var(--color-surface)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <h3 style={{ margin: 0, color: 'var(--color-text-main)' }}>{camp.title}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                      <Calendar size={14} /> {camp.date} ({camp.start_time} - {camp.end_time})
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                      <MapPin size={14} /> {camp.location}
+                    </div>
+                    <div>
+                      <StatusBadge status={camp.status} />
+                    </div>
+                    <button onClick={() => handleViewRegistrations(camp)} className="dashboard btn btn-outline" style={{ marginTop: 'auto', width: '100%' }}>
+                      View Workflow
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ backgroundColor: 'var(--color-surface)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-main)', marginBottom: '16px', fontSize: '1.1rem' }}>
+              <Activity size={18} /> Live Activity Feed
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '500px', overflowY: 'auto' }}>
+              {notifications.length === 0 ? (
+                <p style={{ color: 'var(--color-text-muted)' }}>No recent activity.</p>
+              ) : (
+                notifications.slice(0, 10).map(n => (
+                  <div key={n.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingBottom: '16px', borderBottom: '1px solid var(--color-border)' }}>
+                    <strong style={{ color: 'var(--color-text-main)', fontSize: '0.9rem' }}>{n.event_type}</strong>
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>{n.message}</span>
+                    <small style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', opacity: 0.7 }}>{new Date(n.created_at).toLocaleString()}</small>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const displayName = profile?.fullName || profileUser?.username || user?.username || "Organizer";
+  const displayRole = profileUser?.role || user?.role || "Organizer";
 
   return (
-    <div className="camp-dashboard-container">
-      <aside className="camp-sidebar">
-        <div className="sidebar-logo">
-          <h2>BloodCamp Panel</h2>
+    <DashboardLayout
+      title="Blood Camp Organizer Dashboard"
+      subtitle="Manage your blood donation drives and workflow."
+      brandLabel={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <span style={{ color: 'var(--color-primary)', fontWeight: 'bold', fontSize: '1.1em', textTransform: 'none' }}>
+            {displayName}
+          </span>
+          <span style={{ fontSize: '0.9em', letterSpacing: '0.5px', textTransform: 'uppercase' }}>{displayRole} PORTAL</span>
         </div>
-        <nav className="sidebar-nav">
-          <ul>
-            <li>
-              <button onClick={() => { setView('camps'); setSelectedCamp(null); }} className={view === 'camps' && !selectedCamp ? 'active' : ''}>
-                <LayoutDashboard size={20} /> My Camps
-              </button>
-            </li>
-            <li>
-              <button onClick={() => setView('create')} className={view === 'create' ? 'active' : ''}>
-                <Plus size={20} /> Create Camp
-              </button>
-            </li>
-            <li>
-              <button onClick={() => { setView('profile'); setSelectedCamp(null); }} className={view === 'profile' ? 'active' : ''}>
-                <User size={20} /> My Profile
-              </button>
-            </li>
-          </ul>
-        </nav>
-        <div className="sidebar-bottom">
-          <button onClick={handleLogout} className="logout-btn">
-            <LogOut size={20} /> Logout
-          </button>
-        </div>
-      </aside>
-
-      <main className="camp-main">
-        <header className="camp-header">
-          <h1>Welcome, {user?.username}</h1>
-          <div className="header-status">
-              <span className="live-badge"><Activity size={12} className="pulse-icon" /> Live Updates On</span>
-          </div>
-        </header>
-
-        <div className="camp-content">
-          {view === 'create' && (
-            <div className="camp-form-card animate-in">
-              <h2>Create New Blood Camp</h2>
-              <form onSubmit={handleCreateCamp}>
-                <div className="form-group">
-                  <label>Camp Title</label>
-                  <input type="text" required value={newCamp.title} onChange={e => setNewCamp({...newCamp, title: e.target.value})} placeholder="e.g. Summer Blood Drive" />
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Date</label>
-                    <input type="date" required value={newCamp.date} onChange={e => setNewCamp({...newCamp, date: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label>Start Time</label>
-                    <input type="time" required value={newCamp.start_time} onChange={e => setNewCamp({...newCamp, start_time: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label>End Time</label>
-                    <input type="time" required value={newCamp.end_time} onChange={e => setNewCamp({...newCamp, end_time: e.target.value})} />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Location</label>
-                  <input type="text" required value={newCamp.location} onChange={e => setNewCamp({...newCamp, location: e.target.value})} placeholder="Full Address / Venue" />
-                </div>
-                <div className="form-group">
-                  <label>Description</label>
-                  <textarea rows="3" value={newCamp.description} onChange={e => setNewCamp({...newCamp, description: e.target.value})}></textarea>
-                </div>
-                <button type="submit" className="camp-submit-btn">Publish Camp</button>
-              </form>
-            </div>
-          )}
-
-          {view === 'camps' && !selectedCamp && (
-            <div className="camps-list animate-in">
-              <h2>Your Upcoming Camps</h2>
-              {camps.length === 0 ? (
-                <p>No camps organized yet.</p>
-              ) : (
-                <div className="camp-grid">
-                  {camps.map(camp => (
-                    <div key={camp.id} className="camp-card">
-                      <h3>{camp.title}</h3>
-                      <p><Calendar size={14}/> {camp.date} ({camp.start_time} - {camp.end_time})</p>
-                      <p><MapPin size={14}/> {camp.location}</p>
-                      <span className="camp-status">{camp.status}</span>
-                      <button onClick={() => handleViewRegistrations(camp)} className="view-regs-btn">
-                        View Donor Requests
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {view === 'profile' && (
-              <div className="camp-form-card animate-in">
-                  <h2>Organizer Profile</h2>
-                  <div className="profile-details">
-                      <div className="form-group">
-                          <label>Username</label>
-                          <input type="text" value={user?.username || ''} disabled className="form-input" />
-                      </div>
-                      <div className="form-group">
-                          <label>Email Address</label>
-                          <input type="email" value={user?.email || ''} disabled className="form-input" />
-                      </div>
-                      <div className="form-group">
-                          <label>Role</label>
-                          <input type="text" value={user?.role || ''} disabled className="form-input" style={{ textTransform: 'capitalize' }} />
-                      </div>
-                      <p style={{ marginTop: '1rem', color: '#6b7280', fontSize: '0.9rem' }}>
-                          Profile editing for organizers is managed by System Administrators.
-                      </p>
-                  </div>
-              </div>
-          )}
-
-          {selectedCamp && view === 'camps' && (
-            <div className="registrations-view animate-in">
-              <button className="back-btn" onClick={() => setSelectedCamp(null)}>← Back to Camps</button>
-              <h2>Donor Requests for: {selectedCamp.title}</h2>
-              
-              {registrations.length === 0 ? (
-                <p>No donors have requested to join this camp yet.</p>
-              ) : (
-                <table className="camp-table">
-                  <thead>
-                    <tr>
-                      <th>Donor Name</th>
-                      <th>Blood Group</th>
-                      <th>Phone</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registrations.map(reg => (
-                      <tr key={reg.id}>
-                        <td>{reg.donor_name}</td>
-                        <td><span className="blood-tag">{reg.donor_blood_group || 'N/A'}</span></td>
-                        <td>{reg.donor_phone || 'N/A'}</td>
-                        <td>
-                          <span className={`status-badge ${reg.status}`}>{reg.status}</span>
-                          {reg.appointment_time && <div className="appt-time"><Clock size={12}/> {reg.appointment_time}</div>}
-                        </td>
-                        <td>
-                          {reg.status === 'pending' && (
-                            <button onClick={() => handleApprove(reg)} className="approve-btn">
-                              <CheckCircle size={16} /> Approve
-                            </button>
-                          )}
-                          {reg.status === 'approved' && (
-                            <button onClick={() => handleCompleteDonation(reg)} className="approve-btn" style={{ background: '#10b981', color: 'white', borderColor: '#059669' }}>
-                              <CheckCircle size={16} /> Mark Donated
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+      }
+      menuItems={menuItems}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      headerActions={headerActions}
+    >
+      {renderContent()}
+    </DashboardLayout>
   );
 };
 

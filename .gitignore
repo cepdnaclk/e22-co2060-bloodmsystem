@@ -1,0 +1,41 @@
+# Environment & Secret Files
+.env
+.env.*
+!.env.example
+*.local
+test_credentials.txt
+
+# Databases
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+
+# Python & Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+local_settings.py
+staticfiles/
+media/
+backEnd/main/staticfiles/
+backEnd/main/media/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+npm-debug.log*
+yarn-debug.log*
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

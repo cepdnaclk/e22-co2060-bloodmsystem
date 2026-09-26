@@ -1,690 +1,1227 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { LayoutDashboard, User, Settings, LogOut, Droplets, History, Calendar, Phone, Hospital, IdCard, Edit2, Camera, QrCode, Menu, X as CloseIcon, Clock, FileText, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { getDonorProfile, updateDonorProfile, getDonorDashboard, getDonorDonations } from '../../services/donorService';
-import { getDonorAlerts, markAlertRead } from '../../services/alertService';
-import { getUpcomingCamps, registerForCamp } from '../../services/campService';
-import { QRCodeCanvas } from 'qrcode.react';
-import Swal from 'sweetalert2';
-import { Bell, MapPin, Search, Activity, CheckCircle, XCircle, X as XIcon, AlertTriangle, Info } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import './DonorDashboard.css';
-const DonorSideBar = ({ profile, currentView, setView, onUpdate, isMobileOpen, closeMobileMenu }) => {
-  const navigate = useNavigate();
-  const fileInputRef = useRef(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const handleLogout = () => {
-    localStorage.removeItem('authTokens');
-    navigate('/login');
-  };
-  const handleImageClick = () => {
-    fileInputRef.current.click();
-  };
-  const handleFileChange = async (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setIsUploading(true);
-      try {
-        await updateDonorProfile({ profile_image: e.target.files[0] });
-        Swal.fire({
-          icon: 'success', title: 'Avatar Updated', toast: true,
-          position: 'top-end', showConfirmButton: false, timer: 3000
-        });
-        if (onUpdate) onUpdate();
-      } catch (err) {
-        Swal.fire({ icon: 'error', title: 'Upload Failed' });
-      } finally {
-        setIsUploading(false);
-      }
-    }
-  };
-  const navClick = (dest) => {
-    setView(dest);
-    closeMobileMenu();
-  };
-  return (
-    <>
-      <div className={`donor-sidebar-overlay ${isMobileOpen ? 'active' : ''}`} onClick={closeMobileMenu}></div>
-      <aside className={`donor-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import {
+  LayoutDashboard,
+  User,
+  Settings,
+  Droplet,
+  History,
+  Calendar,
+  Phone,
+  Hospital,
+  IdCard,
+  Edit2,
+  Camera,
+  QrCode,
+  Clock,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  Bell,
+  MapPin,
+  Search,
+  Activity,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Award,
+  ArrowRight,
+  ShieldCheck,
+  Check,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  getDonorProfile,
+  updateDonorProfile,
+  getDonorDashboard,
+  getDonorDonations,
+} from "../../services/donorService";
+import { getDonorAlerts, markAlertRead } from "../../services/alertService";
+import { getUpcomingCamps, registerForCamp } from "../../services/campService";
+import { QRCodeCanvas } from "qrcode.react";
+import Swal from "sweetalert2";
 
-        <button className="mobile-close-btn" type="button" onClick={closeMobileMenu}><CloseIcon size={20} /></button>
+import DashboardLayout from "../../components/layout/DashboardLayout";
+import StatCard from "../../components/ui/StatCard";
+import DataTable from "../../components/ui/DataTable";
+import StatusBadge from "../../components/ui/StatusBadge";
+import "./DonorDashboard.css";
 
-        <div className="sidebar-profile">
-          <div className="profile-avatar-container sidebar-pic-wrapper">
-            {profile?.profile_image ? (
-              <img src={profile.profile_image} alt="Profile" className="profile-avatar responsive-avatar" />
-            ) : (
-              <div className="profile-avatar placeholder-avatar">
-                {profile?.fullName?.charAt(0) || 'U'}
-              </div>
-            )}
-            <div className="avatar-edit-badge" onClick={handleImageClick} title="Update Profile Picture">
-              {isUploading ? <div className="spinner-mini"></div> : <Edit2 size={12} />}
-            </div>
-            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} disabled={isUploading} />
-          </div>
-          <h3 className="profile-name">{profile?.fullName || 'No Name Set'}</h3>
-          <span className="profile-blood-badge">{profile?.blood_group || '--'}</span>
-        </div>
-        <nav className="sidebar-nav">
-          <ul className="nav-list">
-            <li className="nav-item">
-              <button onClick={() => navClick('dashboard')} className={`nav-button ${currentView === 'dashboard' ? 'active' : ''}`}>
-                <LayoutDashboard size={20} /> Dashboard
-              </button>
-            </li>
-            <li className="nav-item">
-              <button onClick={() => navClick('history')} className={`nav-button ${currentView === 'history' ? 'active' : ''}`}>
-                <Clock size={20} /> History
-              </button>
-            </li>
-            <li className="nav-item">
-              <button onClick={() => navClick('profile')} className={`nav-button ${currentView === 'profile' ? 'active' : ''}`}>
-                <User size={20} /> My Profile
-              </button>
-            </li>
-            <li className="nav-item">
-              <button onClick={() => navClick('settings')} className={`nav-button ${currentView === 'settings' ? 'active' : ''}`}>
-                <Settings size={20} /> Settings
-              </button>
-            </li>
-          </ul>
-        </nav>
-        <div className="sidebar-footer">
-          <button onClick={handleLogout} className="logout-button">
-            <LogOut size={20} /> Logout
-          </button>
-        </div>
-      </aside>
-    </>
-  );
-};
-const ProfileView = ({ profile, onUpdate }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState(null);
-  const [previewImage, setPreviewImage] = useState('');
-  const [loading, setLoading] = useState(false);
-  const startEditing = () => {
-    // ?? Create independent editable copy
-    setEditData({
-      phoneNumber: profile?.phoneNumber || '',
-      hospital: profile?.hospital || '',
-      profile_image: null
-    });
-    setPreviewImage(profile?.profile_image || '');
-    setIsEditing(true);
-  };
-  const handleCancel = () => {
-    // ?? Revert easily back to View Mode
-    setIsEditing(false);
-    setEditData(null);
-    setPreviewImage('');
-  };
-  const handleImageChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setEditData({ ...editData, profile_image: file });
-      setPreviewImage(URL.createObjectURL(file));
-    }
-  };
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      await updateDonorProfile(editData);
-      Swal.fire({ icon: 'success', title: 'Profile Updated', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
-      onUpdate(); // Reload original
-      setIsEditing(false);
-      setEditData(null);
-    } catch (err) {
-      const errorMsg = err.response?.data ? JSON.stringify(err.response.data) : 'Update Failed';
-      Swal.fire({ icon: 'error', title: 'Update Failed', text: errorMsg });
-    } finally {
-      setLoading(false);
-    }
-  };
-  return (
-    <div className="profile-page-content animate-in">
-      <div className="profile-header-action">
-        <h1 className="page-title">Personal Information</h1>
-        {!isEditing ? (
-          <button className="btn btn-primary edit-mob-btn" onClick={startEditing}>
-            <Edit2 size={16} /> <span className="btn-text">Edit Profile</span>
-          </button>
-        ) : (
-          <div className="edit-actions-group">
-            <button className="btn btn-secondary" onClick={handleCancel}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleSave} disabled={loading}>
-              {loading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        )}
-      </div>
-      <div className="profile-details-grid grid-responsive">
-        <div className="stat-card">
-          <label className="stat-label"><IdCard size={14} /> Full Name</label>
-          <p className="stat-value">{profile?.fullName || 'Not Provided'}</p>
-
-        </div>
-        <div className="stat-card">
-          <label className="stat-label"><Droplets size={14} /> Blood Group</label>
-          <p className="stat-value">{profile?.blood_group || 'Not Provided'}</p>
-
-        </div>
-        <div className="stat-card">
-          <label className="stat-label"><IdCard size={14} /> NIC Number</label>
-          <p className="stat-value">{profile?.nic_number || 'Not Provided'}</p>
-
-        </div>
-        <div className="stat-card">
-          <label className="stat-label"><Phone size={14} /> Phone Number</label>
-          {isEditing ? (
-            <input className="form-input" value={editData.phoneNumber} onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })} />
-          ) : (
-            <p className="stat-value">{profile?.phoneNumber || 'Not Provided'}</p>
-          )}
-        </div>
-        <div className="stat-card">
-          <label className="stat-label"><Hospital size={14} /> Nearest Hospital</label>
-          {isEditing ? (
-            <input className="form-input" value={editData.hospital} onChange={(e) => setEditData({ ...editData, hospital: e.target.value })} />
-          ) : (
-            <p className="stat-value">{profile?.hospital || 'Not Provided'}</p>
-          )}
-        </div>
-        <div className="stat-card">
-          <label className="stat-label"><Camera size={14} /> Profile Image</label>
-          {isEditing ? (
-            <div className="image-edit-container">
-              <input type="file" accept="image/*" className="form-input file-input" onChange={handleImageChange} />
-              {previewImage && <img src={previewImage} alt="Preview" className="image-preview view-only" />}
-            </div>
-          ) : (
-            <div className="image-view-container">
-              {profile?.profile_image ? (
-                <img src={profile.profile_image} alt="Profile" className="image-preview view-only" />
-              ) : (
-                <p className="stat-value text-muted" style={{ color: '#6b7280', fontSize: '0.9rem', marginTop: '8px' }}>No image set</p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-const DashboardOverview = ({ profile, dashboardStats, alerts, upcomingCamps, onRegisterCamp, onDismissAlert, onToggleAvailability }) => {
-  // Use real server-computed data from /donor/dashboard/ API
-  const nextEligible = dashboardStats?.next_eligible
-    ? new Date(dashboardStats.next_eligible).toLocaleDateString()
-    : 'Eligible Now';
-  const isEligible = dashboardStats?.is_eligible ?? true;
-  const isAvailable = dashboardStats?.is_available ?? profile?.is_available ?? true;
-
-  return (
-    <div className="dashboard-v2 animate-in">
-      <div className="welcome-banner">
-        <div>
-          <h1 className="page-title" style={{ marginBottom: '4px' }}>Hi, {profile?.fullName?.split(' ')[0] || 'Donor'}!</h1>
-          <p className="page-subtitle">Your quick donation dashboard.</p>
-        </div>
-      </div>
-
-      {/* 1. Top Section - Summary Cards */}
-      <div className="stats-grid grid-responsive-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-        <div className="stat-card">
-          <p className="stat-label">Blood Group</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-            <Droplets size={24} className="icon-red" />
-            <h2 className="stat-value" style={{ margin: 0, fontSize: '1.8rem' }}>{profile?.blood_group || '--'}</h2>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <p className="stat-label">Last Donation</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-            <History size={24} className="icon-blue" />
-            <h3 className="stat-value" style={{ margin: 0, fontSize: '1.2rem' }}>
-              {profile?.last_donation ? new Date(profile.last_donation).toLocaleDateString() : 'N/A'}
-            </h3>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <p className="stat-label">Next Eligible Date</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-            <Calendar size={24} className="icon-green" />
-            <h3 className="stat-value" style={{ margin: 0, fontSize: '1.2rem', color: nextEligible === 'Eligible Now' ? '#10b981' : 'inherit' }}>
-              {nextEligible}
-            </h3>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <p className="stat-label">Status</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-            {isAvailable ? <CheckCircle size={24} className="icon-green" /> : <XCircle size={24} color="#6b7280" />}
-            <h3 className="stat-value" style={{ margin: 0, fontSize: '1.2rem', color: isAvailable ? '#10b981' : '#6b7280' }}>
-              {isAvailable ? 'Available' : 'Unavailable'}
-            </h3>
-          </div>
-          {!isEligible && (
-            <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '6px' }}>
-              Not eligible until {nextEligible}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* 2. Middle Section - Main Actions */}
-      <h3 className="section-heading" style={{ marginTop: '2rem', marginBottom: '1rem', fontSize: '1.2rem' }}>Quick Actions</h3>
-      <div className="main-actions-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
-        <button
-          className="action-btn toggle-status-btn"
-          onClick={isEligible ? onToggleAvailability : null}
-          disabled={!isEligible}
-          style={{ padding: '1rem', borderRadius: '12px', border: '1px solid #e5e7eb', background: !isEligible ? '#f3f4f6' : isAvailable ? '#fee2e2' : '#dcfce7', cursor: isEligible ? 'pointer' : 'not-allowed', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', transition: 'all 0.2s', opacity: isEligible ? 1 : 0.6 }}
-        >
-          <Activity size={24} color={!isEligible ? '#9ca3af' : isAvailable ? '#ef4444' : '#10b981'} />
-          <span style={{ fontSize: '1.1rem', fontWeight: 600, color: '#374151' }}>
-            {!isEligible ? `Not Eligible Yet` : `Mark as ${isAvailable ? 'Unavailable' : 'Available'}`}
-          </span>
-        </button>
-
-        <button className="action-btn" style={{ padding: '1rem', borderRadius: '12px', border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-          <Search size={24} className="icon-blue" />
-          <span style={{ fontSize: '1.1rem', fontWeight: 600, color: '#374151' }}>Find Blood Requests</span>
-        </button>
-
-        <button className="action-btn" style={{ padding: '1rem', borderRadius: '12px', border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-          <MapPin size={24} className="icon-red" />
-          <span style={{ fontSize: '1.1rem', fontWeight: 600, color: '#374151' }}>Nearby Camps</span>
-        </button>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
-        {/* 3. Upcoming Camps */}
-        <div className="nearby-section">
-          <h3 className="section-heading" style={{ marginBottom: '1rem', fontSize: '1.2rem' }}>Upcoming Blood Camps</h3>
-          <div className="nearby-list">
-            {upcomingCamps && upcomingCamps.length > 0 ? (
-              upcomingCamps.map(camp => (
-                <div key={camp.id} className="nearby-card" style={{ padding: '1rem', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#111827' }}>{camp.title}</h4>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>
-                      <MapPin size={12} style={{ display: 'inline', marginRight: '4px' }} />{camp.location}
-                    </p>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#6b7280' }}>
-                      <Calendar size={12} style={{ display: 'inline', marginRight: '4px' }} />{camp.date} ({camp.start_time})
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => onRegisterCamp(camp.id)}
-                    style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', cursor: 'pointer' }}
-                  >
-                    Register
-                  </button>
-                </div>
-              ))
-            ) : (
-              <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>No upcoming camps found.</p>
-            )}
-          </div>
-        </div>
-
-        {/* 4. QR Code & Stats */}
-        <div className="qr-section stat-card centered-card" style={{ margin: 0 }}>
-          <div className="qr-header">
-            <QrCode size={24} /> <h2 style={{ fontSize: '1.2rem' }}>Your Donor QR Code</h2>
-          </div>
-          <div className="qr-box">
-            {profile?.qr_id ? (
-              <QRCodeCanvas
-                value={`${window.location.origin}/donor/scan/${profile.qr_id}`} size={160} level={"H"} includeMargin={true}
-                imageSettings={{ src: "/favicon.svg", height: 40, width: 40, excavate: true }}
-              />
-            ) : (
-              <div className="qr-placeholder">QR ID not available</div>
-            )}
-          </div>
-          <div className="qr-id-tag">ID: {profile?.qr_id || 'Generating...'}</div>
-
-          <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb', width: '100%' }}>
-            <p className="stat-label" style={{ marginBottom: '8px' }}>Total Contributions</p>
-            <h3 className="stat-value">{profile?.donations || '0'} Donations</h3>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+const DONOR_TABS = {
+  DASHBOARD: "dashboard",
+  HISTORY: "history",
+  CAMPS: "camps",
+  PROFILE: "profile",
+  SETTINGS: "settings",
 };
 
-const StatusBadge = ({ status }) => {
-  const config = {
-    completed: { bg: '#dcfce7', color: '#15803d', label: 'Completed' },
-    pending: { bg: '#fef9c3', color: '#a16207', label: 'Pending' },
-    cancelled: { bg: '#fee2e2', color: '#b91c1c', label: 'Cancelled' },
-  };
-  const s = config[status] || config.completed;
-  return (
-    <span className="history-status-badge" style={{ background: s.bg, color: s.color }}>
-      {s.label}
-    </span>
+const MENU_ITEMS = [
+  {
+    id: DONOR_TABS.DASHBOARD,
+    icon: <LayoutDashboard size={20} />,
+    label: "Dashboard",
+  },
+  {
+    id: DONOR_TABS.HISTORY,
+    icon: <History size={20} />,
+    label: "Donation History",
+  },
+  {
+    id: DONOR_TABS.CAMPS,
+    icon: <Calendar size={20} />,
+    label: "Upcoming Camps",
+  },
+  {
+    id: DONOR_TABS.PROFILE,
+    icon: <User size={20} />,
+    label: "My Profile",
+  },
+  {
+    id: DONOR_TABS.SETTINGS,
+    icon: <Settings size={20} />,
+    label: "Settings",
+  },
+];
+
+const escapeHtml = (value) =>
+  String(value ?? "").replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[char]
   );
-};
-
-const HistoryView = ({ donations, donationsLoading, donationsMeta, onPageChange, onFilterChange, currentFilter }) => {
-  const results = donations || [];
-  const hasNext = !!donationsMeta?.next;
-  const hasPrev = !!donationsMeta?.previous;
-  const totalCount = donationsMeta?.count || 0;
-  const currentPage = donationsMeta?.currentPage || 1;
-  const totalPages = Math.ceil(totalCount / 10) || 1;
-
-  return (
-    <div className="history-view animate-in">
-      <div className="history-header">
-        <div>
-          <h1 className="page-title" style={{ marginBottom: '4px' }}>Donation History</h1>
-          <p className="page-subtitle" style={{ fontSize: '0.95rem', fontWeight: 400, color: '#6b7280' }}>
-            {totalCount} total donation{totalCount !== 1 ? 's' : ''} on record
-          </p>
-        </div>
-        <div className="history-filter-group">
-          <Filter size={16} style={{ color: '#6b7280' }} />
-          <select
-            className="history-filter-select"
-            value={currentFilter}
-            onChange={(e) => onFilterChange(e.target.value)}
-          >
-            <option value="">All Status</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-      </div>
-
-      {donationsLoading ? (
-        <div className="loader-container centered">
-          <div className="spinner"></div>
-        </div>
-      ) : results.length === 0 ? (
-        <div className="history-empty-state">
-          <div className="history-empty-icon">
-            <FileText size={48} strokeWidth={1.5} />
-          </div>
-          <h3>No Donations Yet</h3>
-          <p>Your donation history will appear here after your first blood donation.</p>
-        </div>
-      ) : (
-        <>
-          {/* Mobile card view */}
-          <div className="history-cards-mobile">
-            {results.map((d) => (
-              <div key={d.id} className="history-card">
-                <div className="history-card-top">
-                  <div className="history-card-date">
-                    <Calendar size={14} />
-                    {new Date(d.donation_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </div>
-                  <StatusBadge status={d.status} />
-                </div>
-                <div className="history-card-body">
-                  <div className="history-card-row">
-                    <span className="history-card-label">Hospital</span>
-                    <span className="history-card-value">{d.hospital_display || d.hospital_name}</span>
-                  </div>
-                  <div className="history-card-row">
-                    <span className="history-card-label">Blood Group</span>
-                    <span className="history-card-value history-blood-tag">{d.blood_group}</span>
-                  </div>
-                  <div className="history-card-row">
-                    <span className="history-card-label">Units</span>
-                    <span className="history-card-value">{d.units}</span>
-                  </div>
-                  {d.notes && (
-                    <div className="history-card-row">
-                      <span className="history-card-label">Notes</span>
-                      <span className="history-card-value" style={{ fontSize: '0.85rem', color: '#6b7280' }}>{d.notes}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop table view */}
-          <div className="history-table-wrapper">
-            <table className="history-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Hospital</th>
-                  <th>Blood Group</th>
-                  <th>Units</th>
-                  <th>Status</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((d) => (
-                  <tr key={d.id}>
-                    <td className="history-date-cell">
-                      <Calendar size={14} className="icon-muted" />
-                      {new Date(d.donation_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </td>
-                    <td>{d.hospital_display || d.hospital_name}</td>
-                    <td><span className="history-blood-tag">{d.blood_group}</span></td>
-                    <td>{d.units}</td>
-                    <td><StatusBadge status={d.status} /></td>
-                    <td className="history-notes-cell">{d.notes || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalCount > 10 && (
-            <div className="history-pagination">
-              <button
-                className="history-page-btn"
-                disabled={!hasPrev}
-                onClick={() => onPageChange(currentPage - 1)}
-              >
-                <ChevronLeft size={16} /> Prev
-              </button>
-              <span className="history-page-info">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                className="history-page-btn"
-                disabled={!hasNext}
-                onClick={() => onPageChange(currentPage + 1)}
-              >
-                Next <ChevronRight size={16} />
-              </button>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-};
 
 const DonorDashboard = () => {
+  const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+
+  const [activeTab, setActiveTab] = useState(DONOR_TABS.DASHBOARD);
   const [profile, setProfile] = useState(null);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [upcomingCamps, setUpcomingCamps] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('dashboard');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // History state
   const [donations, setDonations] = useState([]);
   const [donationsLoading, setDonationsLoading] = useState(false);
-  const [donationsMeta, setDonationsMeta] = useState({ next: null, previous: null, count: 0, currentPage: 1 });
-  const [historyFilter, setHistoryFilter] = useState('');
+  const [donationsMeta, setDonationsMeta] = useState({
+    next: null,
+    previous: null,
+    count: 0,
+    currentPage: 1,
+  });
+  const [historyFilter, setHistoryFilter] = useState("");
 
-  const fetchData = async () => {
+  // Camps state
+  const [campSearch, setCampSearch] = useState("");
+  const [registeringCampId, setRegisteringCampId] = useState(null);
+
+  // Profile Edit state
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    phoneNumber: "",
+    hospital: "",
+    profile_image: null,
+  });
+  const [avatarPreview, setAvatarPreview] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+
+  // Settings state
+  const [smsAlerts, setSmsAlerts] = useState(true);
+  const [emailAlerts, setEmailAlerts] = useState(true);
+
+  // Data fetching
+  const fetchData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
-      // Fetch profile, stats, alerts, and camps in parallel
+      if (!silent) setLoading(true);
       const [profileData, statsData, alertsData, campsData] = await Promise.all([
         getDonorProfile(),
         getDonorDashboard(),
         getDonorAlerts(),
-        getUpcomingCamps()
+        getUpcomingCamps(),
       ]);
+
       setProfile(profileData);
       setDashboardStats(statsData);
-      setAlerts(alertsData);
-      setUpcomingCamps(campsData.results || campsData); // Handle pagination if present
-    } catch (err) {
-      console.error("Fetch error", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      setAlerts(Array.isArray(alertsData) ? alertsData : alertsData?.results || []);
 
-  // Extract unread alerts count
-  const unreadCount = alerts?.filter(a => !a.is_read)?.length || 0;
-
-  const handleToggleAvailability = async () => {
-    if (!profile || !dashboardStats?.is_eligible) return;
-    try {
-      const newStatus = !profile.is_available;
-      // Optimistic update
-      setProfile({ ...profile, is_available: newStatus });
-      setDashboardStats({ ...dashboardStats, is_available: newStatus });
-      await updateDonorProfile({ is_available: newStatus });
-      Swal.fire({
-        icon: 'success',
-        title: `You are now ${newStatus ? 'Available' : 'Unavailable'}`,
-        toast: true, position: 'top-end', showConfirmButton: false, timer: 2000
+      const newCamps = Array.isArray(campsData) ? campsData : campsData?.results || [];
+      setUpcomingCamps((prevCamps) => {
+        if (!prevCamps || prevCamps.length === 0) return newCamps;
+        return newCamps.map((camp) => {
+          const prevCamp = prevCamps.find((pc) => pc.id === camp.id);
+          return {
+            ...camp,
+            is_registered:
+              camp.is_registered || (prevCamp ? prevCamp.is_registered : false),
+          };
+        });
       });
     } catch (err) {
-      // Revert on error
-      setProfile({ ...profile, is_available: !profile.is_available });
-      setDashboardStats({ ...dashboardStats, is_available: profile.is_available });
-      Swal.fire({ icon: 'error', title: 'Failed to update' });
-    }
-  };
-
-  const handleRegisterCamp = async (campId) => {
-    try {
-      await registerForCamp(campId);
-      Swal.fire('Registered!', 'Your request to donate has been sent.', 'success');
-    } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to register';
-      Swal.fire('Error', msg, 'error');
-    }
-  };
-
-  const fetchDonations = useCallback(async (page = 1, status = historyFilter) => {
-    setDonationsLoading(true);
-    try {
-      const params = { page };
-      if (status) params.status = status;
-      const data = await getDonorDonations(params);
-      setDonations(data.results || []);
-      setDonationsMeta({
-        next: data.next,
-        previous: data.previous,
-        count: data.count || 0,
-        currentPage: page,
-      });
-    } catch (err) {
-      console.error('Error fetching donations:', err);
-      setDonations([]);
+      console.error("Fetch error in DonorDashboard:", err);
     } finally {
-      setDonationsLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [historyFilter]);
+  }, []);
 
-  const handleHistoryPageChange = (page) => fetchDonations(page);
-  const handleHistoryFilterChange = (status) => {
-    setHistoryFilter(status);
-    fetchDonations(1, status);
-  };
+  const fetchDonations = useCallback(
+    async (page = 1, status = historyFilter) => {
+      setDonationsLoading(true);
+      try {
+        const params = { page };
+        if (status) params.status = status;
+        const data = await getDonorDonations(params);
+        setDonations(data.results || []);
+        setDonationsMeta({
+          next: data.next,
+          previous: data.previous,
+          count: data.count || 0,
+          currentPage: page,
+        });
+      } catch (err) {
+        console.error("Error fetching donor donations:", err);
+        setDonations([]);
+      } finally {
+        setDonationsLoading(false);
+      }
+    },
+    [historyFilter]
+  );
 
   useEffect(() => {
     fetchData();
 
-    // Live update polling for dashboard data
+    // 10s Live polling for real-time dashboard sync
     const intervalId = setInterval(() => {
-      fetchData();
-    }, 10000); // 10 seconds
+      fetchData(true);
+    }, 10000);
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [fetchData]);
 
-  // Fetch donations when switching to history tab
   useEffect(() => {
-    if (view === 'history') {
+    if (activeTab === DONOR_TABS.HISTORY) {
       fetchDonations(1, historyFilter);
     }
-  }, [view]);
-  return (
-    <div className="donor-container flex-layout">
-      <DonorSideBar
-        profile={profile}
-        currentView={view}
-        setView={setView}
-        onUpdate={fetchData}
-        isMobileOpen={isMobileMenuOpen}
-        closeMobileMenu={() => setIsMobileMenuOpen(false)}
-      />
-      <main className="donor-main">
-        <div className="mobile-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 20px', background: 'white', borderBottom: '1px solid #e5e7eb' }}>
-          <div className="mobile-brand">
-             <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#374151' }}>
-               <Menu size={24} />
-             </button>
-          </div>
-          <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-             <Link to="/donor/notifications" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', padding: '8px', borderRadius: '50%', color: '#374151', textDecoration: 'none' }}>
-               <Bell size={20} />
-               {unreadCount > 0 && (
-                 <span style={{ position: 'absolute', top: '-2px', right: '-2px', background: '#ef4444', color: 'white', fontSize: '0.65rem', fontWeight: 'bold', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
-                   {unreadCount}
-                 </span>
-               )}
-             </Link>
-          </div>
-        </div>
-        <div className="donor-content-area">
-          {loading ? (
-            <div className="loader-container centered">
-              <div className="spinner"></div>
+  }, [activeTab, fetchDonations, historyFilter]);
+
+  // Derived Values
+  const isEligible = dashboardStats?.is_eligible ?? true;
+  const nextEligible = dashboardStats?.next_eligible
+    ? new Date(dashboardStats.next_eligible).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "Eligible Now";
+
+  const isAvailable = dashboardStats?.is_available ?? profile?.is_available ?? true;
+  const unreadAlerts = alerts.filter((a) => !a.is_read);
+  const unreadCount = unreadAlerts.length;
+
+  const displayName = profile?.fullName || "Valued Donor";
+  const displayHospital = profile?.hospital || "National Blood Center";
+
+  // Action Handlers
+  const handleToggleAvailability = async () => {
+    if (!profile || !isEligible) return;
+
+    const newStatus = !isAvailable;
+    // Optimistic update
+    setProfile((prev) => ({ ...prev, is_available: newStatus }));
+    setDashboardStats((prev) => ({ ...prev, is_available: newStatus }));
+
+    try {
+      await updateDonorProfile({ is_available: newStatus });
+      Swal.fire({
+        icon: "success",
+        title: `Status: ${newStatus ? "Available for Urgent Needs" : "Marked Unavailable"}`,
+        toast: true,
+        position: "top-end",
+        showConfirmButton: false,
+        timer: 2500,
+      });
+    } catch {
+      // Revert on error
+      setProfile((prev) => ({ ...prev, is_available: !newStatus }));
+      setDashboardStats((prev) => ({ ...prev, is_available: !newStatus }));
+      Swal.fire({ icon: "error", title: "Failed to update availability status." });
+    }
+  };
+
+  const handleRegisterCamp = async (campId) => {
+    if (!isEligible) {
+      Swal.fire(
+        "Resting Period Active",
+        `You will be eligible to donate again on ${nextEligible}. Thank you for your commitment!`,
+        "warning"
+      );
+      return;
+    }
+
+    try {
+      setRegisteringCampId(campId);
+      await registerForCamp(campId);
+      Swal.fire({
+        icon: "success",
+        title: "Registration Confirmed!",
+        text: "You have been registered for this donation drive. Present your QR pass on arrival.",
+      });
+
+      setUpcomingCamps((prev) =>
+        prev.map((c) => (c.id === campId ? { ...c, is_registered: true } : c))
+      );
+    } catch (err) {
+      const msg = err.response?.data?.detail || "Registration could not be completed.";
+      Swal.fire("Registration Failed", msg, "error");
+    } finally {
+      setRegisteringCampId(null);
+    }
+  };
+
+  const handleOpenNotifications = async () => {
+    if (!alerts || alerts.length === 0) {
+      Swal.fire({
+        title: "Notifications",
+        text: "You have no notifications at this time.",
+        icon: "info",
+      });
+      return;
+    }
+
+    const html = `
+      <div style="text-align: left; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px;">
+        ${alerts
+          .slice(0, 10)
+          .map(
+            (a) => `
+          <div style="padding: 12px; border-radius: 8px; border: 1px solid var(--color-border); background: ${
+            a.is_read ? "transparent" : "var(--color-secondary-light)"
+          };">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <strong style="color: var(--color-text-main); font-size: 0.85rem; text-transform: uppercase;">${escapeHtml(
+                a.alert_type || "Alert"
+              )}</strong>
+              <small style="color: var(--color-text-muted); font-size: 0.75rem;">${escapeHtml(
+                new Date(a.created_at).toLocaleString()
+              )}</small>
             </div>
-          ) : (
-            <>
-              {view === 'dashboard' && <DashboardOverview profile={profile} dashboardStats={dashboardStats} alerts={alerts} upcomingCamps={upcomingCamps} onRegisterCamp={handleRegisterCamp} onToggleAvailability={handleToggleAvailability} />}
-              {view === 'history' && (
-                <HistoryView
-                  donations={donations}
-                  donationsLoading={donationsLoading}
-                  donationsMeta={donationsMeta}
-                  onPageChange={handleHistoryPageChange}
-                  onFilterChange={handleHistoryFilterChange}
-                  currentFilter={historyFilter}
-                />
-              )}
-              {view === 'profile' && <ProfileView profile={profile} onUpdate={fetchData} />}
-              {view === 'settings' && (
-                <div className="animate-in">
-                  <h1 className="page-title">Settings</h1>
-                  <p className="page-subtitle">Manage your account preferences.</p>
-                  <div className="stat-card">Settings module coming soon...</div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </main>
+            <p style="margin: 0; color: var(--color-text-main); font-size: 0.875rem;">${escapeHtml(
+              a.message
+            )}</p>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+    `;
+
+    const result = await Swal.fire({
+      title: `Notifications (${unreadCount} unread)`,
+      html,
+      width: 620,
+      showCancelButton: true,
+      cancelButtonText: "Close",
+      confirmButtonText: unreadCount > 0 ? "Mark All as Read" : "View Full Alerts Page",
+      confirmButtonColor: "var(--color-primary)",
+    });
+
+    if (result.isConfirmed) {
+      if (unreadCount > 0) {
+        await Promise.allSettled(unreadAlerts.map((a) => markAlertRead(a.id)));
+        await fetchData(true);
+      } else {
+        navigate("/donor/notifications");
+      }
+    }
+  };
+
+  // Profile Edit Handlers
+  const handleStartEditProfile = () => {
+    setEditFormData({
+      phoneNumber: profile?.phoneNumber || "",
+      hospital: profile?.hospital || "",
+      profile_image: null,
+    });
+    setAvatarPreview(profile?.profile_image || "");
+    setIsEditingProfile(true);
+  };
+
+  const handleCancelEditProfile = () => {
+    setIsEditingProfile(false);
+    setEditFormData({ phoneNumber: "", hospital: "", profile_image: null });
+    setAvatarPreview("");
+  };
+
+  const handleAvatarFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setEditFormData((prev) => ({ ...prev, profile_image: file }));
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setProfileSaving(true);
+    try {
+      await updateDonorProfile(editFormData);
+      Swal.fire({
+        icon: "success",
+        title: "Profile Updated",
+        toast: true,
+        position: "top-end",
+        showConfirmButton: false,
+        timer: 2500,
+      });
+      await fetchData(true);
+      setIsEditingProfile(false);
+    } catch (err) {
+      const errorMsg = err.response?.data
+        ? JSON.stringify(err.response.data)
+        : "Failed to update profile.";
+      Swal.fire({ icon: "error", title: "Update Failed", text: errorMsg });
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  // Filtered Camps
+  const filteredCamps = useMemo(() => {
+    if (!campSearch.trim()) return upcomingCamps;
+    const q = campSearch.toLowerCase();
+    return upcomingCamps.filter(
+      (c) =>
+        c.title?.toLowerCase().includes(q) ||
+        c.location?.toLowerCase().includes(q) ||
+        c.description?.toLowerCase().includes(q)
+    );
+  }, [upcomingCamps, campSearch]);
+
+  // Header Actions
+  const headerActions = (
+    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+      <button
+        type="button"
+        onClick={isEligible ? handleToggleAvailability : null}
+        disabled={!isEligible}
+        className={`dashboard btn ${isAvailable ? "btn-primary" : "btn-outline"}`}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "6px 14px",
+          fontSize: "0.85rem",
+          cursor: isEligible ? "pointer" : "not-allowed",
+          opacity: isEligible ? 1 : 0.65,
+        }}
+        title={
+          isEligible
+            ? "Click to toggle availability in donor search"
+            : "Unavailable during resting cooldown"
+        }
+      >
+        {isAvailable && <span className="donor-pulse-dot"></span>}
+        <Activity size={16} />
+        <span>{isAvailable ? "Available" : "Unavailable"}</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={handleOpenNotifications}
+        className="dashboard-home-button"
+        style={{ position: "relative", padding: "8px", borderRadius: "50%" }}
+        title="Notifications"
+        aria-label={`Open notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+      >
+        <Bell size={20} />
+        {unreadCount > 0 && (
+          <span
+            style={{
+              position: "absolute",
+              top: "-2px",
+              right: "-2px",
+              backgroundColor: "var(--color-critical)",
+              color: "white",
+              fontSize: "0.65rem",
+              fontWeight: "bold",
+              width: "18px",
+              height: "18px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "50%",
+              border: "2px solid var(--color-surface)",
+            }}
+          >
+            {unreadCount}
+          </span>
+        )}
+      </button>
     </div>
   );
+
+  // Render Sub-Views
+  const renderDashboardOverview = () => {
+    return (
+      <div className="donor-dashboard-page">
+        {/* Welcome Card */}
+        <div className="donor-welcome-card">
+          <div className="donor-welcome-info">
+            <h2>Welcome back, {displayName}</h2>
+            <p>
+              Your donations empower life-saving medical care. Thank you for being a registered donor.
+            </p>
+          </div>
+          <div className="donor-blood-tag">
+            <Droplet size={18} />
+            <span>Blood Group: {profile?.blood_group || "--"}</span>
+          </div>
+        </div>
+
+        {/* 4 Stats Grid */}
+        <div className="stats-grid">
+          <StatCard
+            title="Blood Group"
+            value={profile?.blood_group || "--"}
+            subtitle="Whole Blood Donor"
+            Icon={Droplet}
+            colorClass="text-primary"
+          />
+          <StatCard
+            title="Total Donations"
+            value={`${profile?.donations ?? dashboardStats?.total_donations ?? 0} Times`}
+            subtitle={`~${(profile?.donations ?? dashboardStats?.total_donations ?? 0) * 3} lives supported`}
+            Icon={Award}
+            colorClass="text-primary"
+          />
+          <StatCard
+            title="Donation Eligibility"
+            value={isEligible ? "Eligible Now" : nextEligible}
+            subtitle={isEligible ? "Ready to donate blood" : "Required resting period"}
+            Icon={Calendar}
+            colorClass={isEligible ? "text-success" : "text-warning"}
+          />
+          <StatCard
+            title="Emergency Search"
+            value={isAvailable ? "Available" : "Unavailable"}
+            subtitle={
+              isEligible
+                ? isAvailable
+                  ? "Reachable for urgent requests"
+                  : "Hidden from rapid alerts"
+                : "Inactive (Cooldown period)"
+            }
+            Icon={Activity}
+            colorClass={isAvailable ? "text-success" : "text-muted"}
+          />
+        </div>
+
+        {/* Resting Period Notice if ineligible */}
+        {!isEligible && (
+          <div
+            className="card"
+            style={{
+              borderLeft: "4px solid var(--color-warning)",
+              padding: "16px 20px",
+              marginBottom: "var(--spacing-6)",
+              backgroundColor: "var(--color-surface)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <Clock size={24} style={{ color: "var(--color-warning)", flexShrink: 0 }} />
+              <div>
+                <h4
+                  style={{
+                    margin: "0 0 4px 0",
+                    fontSize: "1rem",
+                    color: "var(--color-text-main)",
+                    fontWeight: 600,
+                  }}
+                >
+                  Post-Donation Rest Period Active
+                </h4>
+                <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                  Safe medical standards require a 90-day interval between whole blood donations.
+                  You will be eligible again on <strong>{nextEligible}</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Actions Grid */}
+        <div className="donor-actions-grid">
+          <button
+            type="button"
+            className="donor-action-btn"
+            onClick={isEligible ? handleToggleAvailability : null}
+            disabled={!isEligible}
+            style={{ opacity: isEligible ? 1 : 0.6 }}
+          >
+            <div className={`donor-action-icon ${isAvailable ? "success" : "secondary"}`}>
+              <Activity size={22} />
+            </div>
+            <div>
+              <p className="donor-action-title">
+                {isAvailable ? "Mark Unavailable" : "Mark Available"}
+              </p>
+              <p className="donor-action-desc">
+                {isAvailable ? "Pause emergency match" : "Enable rapid matching"}
+              </p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            className="donor-action-btn"
+            onClick={() => setActiveTab(DONOR_TABS.CAMPS)}
+          >
+            <div className="donor-action-icon primary">
+              <Calendar size={22} />
+            </div>
+            <div>
+              <p className="donor-action-title">Upcoming Camps</p>
+              <p className="donor-action-desc">Explore donation drives nearby</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            className="donor-action-btn"
+            onClick={() => setActiveTab(DONOR_TABS.HISTORY)}
+          >
+            <div className="donor-action-icon secondary">
+              <History size={22} />
+            </div>
+            <div>
+              <p className="donor-action-title">Donation History</p>
+              <p className="donor-action-desc">View past records & certificates</p>
+            </div>
+          </button>
+        </div>
+
+        {/* Two Column Layout: Camps & QR Digital Pass */}
+        <div className="donor-overview-layout">
+          {/* Left: Upcoming Camps */}
+          <div className="card" style={{ margin: 0 }}>
+            <div className="card-header">
+              <h3 className="card-title">
+                <Calendar size={20} />
+                <span>Upcoming Blood Drives</span>
+              </h3>
+              <button
+                type="button"
+                className="dashboard btn btn-outline"
+                style={{ padding: "4px 10px", fontSize: "0.8rem" }}
+                onClick={() => setActiveTab(DONOR_TABS.CAMPS)}
+              >
+                View All
+              </button>
+            </div>
+            <div className="card-body">
+              {upcomingCamps && upcomingCamps.length > 0 ? (
+                <div className="donor-camp-list">
+                  {upcomingCamps.slice(0, 3).map((camp) => (
+                    <div key={camp.id} className="donor-camp-item">
+                      <div>
+                        <h4 className="donor-camp-title">{camp.title}</h4>
+                        <div className="donor-camp-meta">
+                          <span>
+                            <MapPin size={13} /> {camp.location}
+                          </span>
+                          <span>
+                            <Calendar size={13} /> {camp.date}
+                          </span>
+                          <span>
+                            <Clock size={13} /> {camp.start_time}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        {camp.is_registered ? (
+                          <StatusBadge status="registered" />
+                        ) : (
+                          <button
+                            type="button"
+                            className="dashboard btn btn-primary"
+                            style={{ padding: "6px 14px", fontSize: "0.85rem" }}
+                            onClick={() => handleRegisterCamp(camp.id)}
+                            disabled={!isEligible || registeringCampId === camp.id}
+                          >
+                            {registeringCampId === camp.id
+                              ? "Registering..."
+                              : isEligible
+                              ? "Register"
+                              : "Ineligible"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="donor-empty-state">
+                  <div className="donor-empty-icon">
+                    <Calendar size={28} />
+                  </div>
+                  <h3>No Scheduled Drives Found</h3>
+                  <p>Check back later or view community drives scheduled across other regions.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Digital Pass & QR Code */}
+          <div className="card" style={{ margin: 0 }}>
+            <div className="card-header">
+              <h3 className="card-title">
+                <QrCode size={20} />
+                <span>Digital Donor Pass</span>
+              </h3>
+              <span className="status-badge success">Verified</span>
+            </div>
+            <div className="card-body">
+              <div className="donor-pass-container">
+                <div className="donor-qr-wrapper">
+                  <QRCodeCanvas
+                    value={`${window.location.origin}/donor/scan/${profile?.qr_id || "DEMO-DONOR"}`}
+                    size={160}
+                    level={"H"}
+                    includeMargin={false}
+                  />
+                </div>
+                <div className="donor-id-badge">
+                  ID: {profile?.qr_id || "GENERATING..."}
+                </div>
+
+                <div className="donor-pass-info-grid">
+                  <div className="donor-pass-info-item">
+                    <p className="donor-pass-info-label">Blood Type</p>
+                    <p className="donor-pass-info-val">{profile?.blood_group || "--"}</p>
+                  </div>
+                  <div className="donor-pass-info-item">
+                    <p className="donor-pass-info-label">NIC Number</p>
+                    <p className="donor-pass-info-val">{profile?.nic_number || "Verified"}</p>
+                  </div>
+                  <div className="donor-pass-info-item">
+                    <p className="donor-pass-info-label">Hospital</p>
+                    <p className="donor-pass-info-val" style={{ fontSize: "0.8rem" }}>
+                      {profile?.hospital || "National Center"}
+                    </p>
+                  </div>
+                  <div className="donor-pass-info-item">
+                    <p className="donor-pass-info-label">Total Donated</p>
+                    <p className="donor-pass-info-val">{profile?.donations || 0} times</p>
+                  </div>
+                </div>
+
+                <p className="donor-pass-hint">
+                  Present this QR pass at registered donation drives or hospitals for instant registration.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderHistoryView = () => {
+    const totalCount = donationsMeta?.count || 0;
+    const currentPage = donationsMeta?.currentPage || 1;
+    const totalPages = Math.ceil(totalCount / 10) || 1;
+
+    return (
+      <div className="donor-dashboard-page">
+        <div className="donor-history-filter-bar">
+          <div>
+            <h2 style={{ fontSize: "1.25rem", margin: 0, fontWeight: 700 }}>
+              Donation Records
+            </h2>
+            <p style={{ margin: "2px 0 0 0", color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
+              {totalCount} total donation{totalCount !== 1 ? "s" : ""} on record
+            </p>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Filter size={16} style={{ color: "var(--color-text-muted)" }} />
+            <select
+              className="donor-select-input"
+              value={historyFilter}
+              onChange={(e) => setHistoryFilter(e.target.value)}
+              aria-label="Filter donations by status"
+            >
+              <option value="">All Status</option>
+              <option value="completed">Completed</option>
+              <option value="pending">Pending</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+
+        {donationsLoading ? (
+          <div className="donor-empty-state">
+            <div className="spinner"></div>
+            <p style={{ marginTop: "12px" }}>Loading donation records...</p>
+          </div>
+        ) : (
+          <>
+            <DataTable
+              columns={["Date", "Hospital", "Blood Group", "Units", "Status", "Notes"]}
+              data={donations}
+              emptyMessage="No donation records found for this filter."
+              renderRow={(row, idx) => (
+                <tr key={row.id || idx}>
+                  <td style={{ whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Calendar size={14} style={{ color: "var(--color-text-muted)" }} />
+                      <span>
+                        {new Date(row.donation_date).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  </td>
+                  <td>{row.hospital_display || row.hospital_name || "National Blood Center"}</td>
+                  <td>
+                    <span className="status-badge info">{row.blood_group || profile?.blood_group}</span>
+                  </td>
+                  <td>{row.units || 1} Unit(s)</td>
+                  <td>
+                    <StatusBadge status={row.status || "completed"} />
+                  </td>
+                  <td style={{ color: "var(--color-text-muted)", fontSize: "0.85rem" }}>
+                    {row.notes || "—"}
+                  </td>
+                </tr>
+              )}
+            />
+
+            {totalCount > 10 && (
+              <div className="donor-pagination-bar">
+                <button
+                  type="button"
+                  className="dashboard btn btn-outline"
+                  disabled={!donationsMeta?.previous}
+                  onClick={() => fetchDonations(currentPage - 1)}
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  <ChevronLeft size={16} /> Previous
+                </button>
+                <span style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", fontWeight: 500 }}>
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="dashboard btn btn-outline"
+                  disabled={!donationsMeta?.next}
+                  onClick={() => fetchDonations(currentPage + 1)}
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  Next <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const renderCampsView = () => {
+    return (
+      <div className="donor-dashboard-page">
+        <div>
+          <h2 style={{ fontSize: "1.25rem", margin: 0, fontWeight: 700 }}>
+            Upcoming Blood Donation Drives
+          </h2>
+          <p style={{ margin: "2px 0 var(--spacing-4) 0", color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
+            Participate in community donation drives organized by regional medical centers.
+          </p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="donor-camps-search-bar">
+          <Search size={18} style={{ color: "var(--color-text-muted)" }} />
+          <input
+            type="text"
+            className="donor-camps-search-input"
+            placeholder="Search drives by name, city, or venue..."
+            value={campSearch}
+            onChange={(e) => setCampSearch(e.target.value)}
+          />
+          {campSearch && (
+            <button
+              type="button"
+              className="dashboard btn"
+              style={{ padding: "2px 8px", fontSize: "0.75rem" }}
+              onClick={() => setCampSearch("")}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {filteredCamps.length === 0 ? (
+          <div className="donor-empty-state">
+            <div className="donor-empty-icon">
+              <Calendar size={28} />
+            </div>
+            <h3>No Drives Match Your Search</h3>
+            <p>Try searching for a different area or clear your search query.</p>
+          </div>
+        ) : (
+          <div className="donor-camps-grid">
+            {filteredCamps.map((camp) => (
+              <div key={camp.id} className="card" style={{ margin: 0, display: "flex", flexDirection: "column" }}>
+                <div className="card-header">
+                  <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>{camp.title}</h4>
+                  {camp.is_registered && <StatusBadge status="registered" />}
+                </div>
+                <div className="card-body" style={{ flex: 1, display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                    <MapPin size={16} style={{ color: "var(--color-primary)", flexShrink: 0 }} />
+                    <span>{camp.location}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                    <Calendar size={16} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />
+                    <span>
+                      {camp.date} ({camp.start_time} - {camp.end_time || "End"})
+                    </span>
+                  </div>
+                  {camp.destination_hospital_display && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                      <Hospital size={16} style={{ color: "var(--color-text-muted)", flexShrink: 0 }} />
+                      <span>Beneficiary: {camp.destination_hospital_display}</span>
+                    </div>
+                  )}
+                  {camp.description && (
+                    <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "var(--color-text-main)", opacity: 0.85 }}>
+                      {camp.description}
+                    </p>
+                  )}
+
+                  <div style={{ marginTop: "auto", paddingTop: "12px" }}>
+                    <button
+                      type="button"
+                      className="dashboard btn btn-primary"
+                      style={{ width: "100%" }}
+                      disabled={camp.is_registered || !isEligible || registeringCampId === camp.id}
+                      onClick={() => handleRegisterCamp(camp.id)}
+                    >
+                      {camp.is_registered
+                        ? "Registered"
+                        : registeringCampId === camp.id
+                        ? "Registering..."
+                        : isEligible
+                        ? "Register to Donate"
+                        : "Ineligible (Resting)"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderProfileView = () => {
+    return (
+      <div className="donor-dashboard-page">
+        <div className="card" style={{ margin: 0 }}>
+          <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "24px" }}>
+            <h3 className="card-title" style={{ margin: 0, display: "flex", alignItems: "center", gap: "10px" }}>
+              <User size={20} />
+              <span>Personal & Medical Profile</span>
+            </h3>
+            {!isEditingProfile ? (
+              <button
+                type="button"
+                className="dashboard btn btn-primary"
+                onClick={handleStartEditProfile}
+                style={{ display: "inline-flex", alignItems: "center", gap: "8px", width: "auto", flexShrink: 0, padding: "8px 18px" }}
+              >
+                <Edit2 size={16} /> Edit Profile
+              </button>
+            ) : (
+              <div style={{ display: "flex", gap: "12px", width: "auto", flexShrink: 0 }}>
+                <button
+                  type="button"
+                  className="dashboard btn btn-outline"
+                  onClick={handleCancelEditProfile}
+                  disabled={profileSaving}
+                  style={{ width: "auto", padding: "8px 16px" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="dashboard btn btn-primary"
+                  onClick={handleSaveProfile}
+                  disabled={profileSaving}
+                  style={{ width: "auto", padding: "8px 16px" }}
+                >
+                  {profileSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="card-body">
+            {/* Top Profile Header with Avatar */}
+            <div className="donor-profile-top">
+              <div className="donor-avatar-container">
+                {avatarPreview || profile?.profile_image ? (
+                  <img
+                    src={avatarPreview || profile?.profile_image}
+                    alt="Donor Avatar"
+                    className="donor-avatar-img"
+                  />
+                ) : (
+                  <div className="donor-avatar-placeholder">
+                    {profile?.fullName?.charAt(0) || "D"}
+                  </div>
+                )}
+                {isEditingProfile && (
+                  <label className="donor-avatar-upload-overlay" title="Change Profile Picture">
+                    <Camera size={18} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={handleAvatarFileChange}
+                      style={{ display: "none" }}
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div>
+                <h3 style={{ margin: "0 0 6px 0", fontSize: "1.3rem", fontWeight: 700 }}>
+                  {profile?.fullName || "Donor"}
+                </h3>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+                  <span className="status-badge info">Group: {profile?.blood_group || "--"}</span>
+                  <span className="status-badge neutral">NIC: {profile?.nic_number || "Not set"}</span>
+                  <span className={`status-badge ${isAvailable ? "success" : "neutral"}`}>
+                    {isAvailable ? "Available" : "Unavailable"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Profile Form Grid */}
+            <div className="donor-form-grid">
+              <div className="donor-form-group">
+                <label className="donor-form-label">
+                  <IdCard size={14} /> Full Name (Verified)
+                </label>
+                <div className="donor-form-static">{profile?.fullName || "Not Provided"}</div>
+              </div>
+
+              <div className="donor-form-group">
+                <label className="donor-form-label">
+                  <Droplet size={14} /> Blood Group (Verified)
+                </label>
+                <div className="donor-form-static">{profile?.blood_group || "Not Provided"}</div>
+              </div>
+
+              <div className="donor-form-group">
+                <label className="donor-form-label">
+                  <ShieldCheck size={14} /> National Identity Card (NIC)
+                </label>
+                <div className="donor-form-static">{profile?.nic_number || "Not Provided"}</div>
+              </div>
+
+              <div className="donor-form-group">
+                <label className="donor-form-label">
+                  <Phone size={14} /> Contact Phone Number
+                </label>
+                {isEditingProfile ? (
+                  <input
+                    type="tel"
+                    className="donor-form-input"
+                    value={editFormData.phoneNumber}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, phoneNumber: e.target.value })
+                    }
+                    placeholder="e.g. +94 77 123 4567"
+                  />
+                ) : (
+                  <div className="donor-form-static">{profile?.phoneNumber || "Not Provided"}</div>
+                )}
+              </div>
+
+              <div className="donor-form-group">
+                <label className="donor-form-label">
+                  <Hospital size={14} /> Preferred Nearest Hospital
+                </label>
+                {isEditingProfile ? (
+                  <input
+                    type="text"
+                    className="donor-form-input"
+                    value={editFormData.hospital}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, hospital: e.target.value })
+                    }
+                    placeholder="e.g. National Hospital of Sri Lanka"
+                  />
+                ) : (
+                  <div className="donor-form-static">{profile?.hospital || "Not Provided"}</div>
+                )}
+              </div>
+
+              <div className="donor-form-group">
+                <label className="donor-form-label">
+                  <Award size={14} /> Cumulative Donations
+                </label>
+                <div className="donor-form-static">
+                  {profile?.donations ?? 0} Recorded Whole Blood Units
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSettingsView = () => {
+    return (
+      <div className="donor-dashboard-page">
+        <div className="card" style={{ margin: 0 }}>
+          <div className="card-header">
+            <h3 className="card-title">
+              <Settings size={20} />
+              <span>Donor Account & Notification Preferences</span>
+            </h3>
+          </div>
+          <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div>
+              <h4 style={{ margin: "0 0 12px 0", fontSize: "1rem", fontWeight: 600 }}>
+                Emergency Blood Request Alerts
+              </h4>
+              <p style={{ margin: "0 0 16px 0", fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                Control how you are notified when nearby medical facilities require your blood type for urgent procedures.
+              </p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={smsAlerts}
+                    onChange={(e) => setSmsAlerts(e.target.checked)}
+                    style={{ width: "16px", height: "16px", accentColor: "var(--color-primary)" }}
+                  />
+                  <div>
+                    <strong style={{ fontSize: "0.9rem" }}>SMS Notifications</strong>
+                    <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
+                      Receive priority text messages during critical shortages.
+                    </p>
+                  </div>
+                </label>
+
+                <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={emailAlerts}
+                    onChange={(e) => setEmailAlerts(e.target.checked)}
+                    style={{ width: "16px", height: "16px", accentColor: "var(--color-primary)" }}
+                  />
+                  <div>
+                    <strong style={{ fontSize: "0.9rem" }}>Email Bulletins</strong>
+                    <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
+                      Monthly donation reminders and upcoming drive invitations.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <hr style={{ border: "none", borderTop: "1px solid var(--color-border)" }} />
+
+            <div>
+              <h4 style={{ margin: "0 0 8px 0", fontSize: "1rem", fontWeight: 600 }}>Security & Credentials</h4>
+              <p style={{ margin: "0 0 16px 0", fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                Need to reset your password or update your login credentials?
+              </p>
+              <button
+                type="button"
+                className="dashboard btn btn-outline"
+                onClick={() => navigate("/forgot-password")}
+              >
+                Reset Account Password
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderContent = () => {
+    if (loading && !profile) {
+      return (
+        <div className="donor-empty-state">
+          <div className="spinner"></div>
+          <p style={{ marginTop: "16px" }}>Loading donor portal data...</p>
+        </div>
+      );
+    }
+
+    switch (activeTab) {
+      case DONOR_TABS.DASHBOARD:
+        return renderDashboardOverview();
+      case DONOR_TABS.HISTORY:
+        return renderHistoryView();
+      case DONOR_TABS.CAMPS:
+        return renderCampsView();
+      case DONOR_TABS.PROFILE:
+        return renderProfileView();
+      case DONOR_TABS.SETTINGS:
+        return renderSettingsView();
+      default:
+        return renderDashboardOverview();
+    }
+  };
+
+  return (
+    <DashboardLayout
+      title={displayName}
+      subtitle={`${profile?.blood_group ? `Group ${profile.blood_group} • ` : ""}${displayHospital}`}
+      brandLabel={
+        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+          <span
+            style={{
+              color: "var(--color-primary)",
+              fontWeight: "bold",
+              fontSize: "1.1em",
+              textTransform: "none",
+            }}
+          >
+            {displayName}
+          </span>
+          <span style={{ fontSize: "0.9em", letterSpacing: "0.5px" }}>DONOR PORTAL</span>
+        </div>
+      }
+      menuItems={MENU_ITEMS}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      headerActions={headerActions}
+    >
+      <div className="donor-dashboard-page">{renderContent()}</div>
+    </DashboardLayout>
+  );
 };
+
 export default DonorDashboard;

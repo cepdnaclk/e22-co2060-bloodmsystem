@@ -1,162 +1,201 @@
-import React, { useState } from 'react';
-import { PlusCircle, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Clock, Bell, RefreshCcw } from 'lucide-react';
+import Swal from 'sweetalert2';
+import {
+    completeCampRegistration,
+    getCampRegistrations,
+    getOrganizerCamps,
+    getWorkflowNotifications,
+    markRegistrationArrived,
+    markWorkflowNotificationRead,
+    sendRegistrationToScreening,
+} from '../../services/campService';
 import './LabDashboard.css';
 
 const LabDashboard = () => {
-    const [showAddForm, setShowAddForm] = useState(false);
+    const [camps, setCamps] = useState([]);
+    const [selectedCampId, setSelectedCampId] = useState('');
+    const [registrations, setRegistrations] = useState([]);
+    const [notifications, setNotifications] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [processingId, setProcessingId] = useState(null);
+
+    const loadData = async (campIdOverride = null, silent = false) => {
+        try {
+            if (!silent) setLoading(true);
+            const [campData, notificationData] = await Promise.all([
+                getOrganizerCamps(),
+                getWorkflowNotifications(),
+            ]);
+
+            setCamps(campData);
+            setNotifications(notificationData);
+
+            const activeCampId = campIdOverride || selectedCampId || campData?.[0]?.id;
+            if (activeCampId) {
+                const regData = await getCampRegistrations(activeCampId);
+                setSelectedCampId(activeCampId);
+                setRegistrations(regData);
+            } else {
+                setRegistrations([]);
+            }
+        } catch (error) {
+            Swal.fire('Error', error.response?.data?.detail || 'Failed to load staff dashboard data.', 'error');
+        } finally {
+            if (!silent) setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+        const timer = setInterval(() => loadData(null, true), 8000);
+        return () => clearInterval(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const grouped = useMemo(() => {
+        return {
+            registered: registrations.filter((r) => r.status === 'registered'),
+            arrived: registrations.filter((r) => r.status === 'arrived'),
+            approved: registrations.filter((r) => r.status === 'approved'),
+        };
+    }, [registrations]);
+
+    const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+    const runAction = async (registrationId, action) => {
+        try {
+            setProcessingId(registrationId);
+            if (action === 'arrive') await markRegistrationArrived(registrationId);
+            if (action === 'screening') await sendRegistrationToScreening(registrationId);
+            if (action === 'donated') await completeCampRegistration(registrationId);
+            await loadData(selectedCampId);
+        } catch (error) {
+            Swal.fire('Action Failed', error.response?.data?.detail || 'Could not update donor status.', 'error');
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const openNotifications = async () => {
+        const html = notifications.length
+            ? `<div style="text-align:left;max-height:280px;overflow:auto;">${notifications
+                  .map(
+                      (n) =>
+                          `<div style="padding:8px 0;border-bottom:1px solid #eee;">
+                            <strong>${n.event_type}</strong><br/>
+                            <span>${n.message}</span><br/>
+                            <small>${new Date(n.created_at).toLocaleString()}</small>
+                           </div>`,
+                  )
+                  .join('')}</div>`
+            : '<p>No notifications.</p>';
+        await Swal.fire({ title: 'Workflow Notifications', html, width: 700 });
+        const unread = notifications.filter((n) => !n.is_read);
+        await Promise.all(unread.map((n) => markWorkflowNotificationRead(n.id)));
+        await loadData(selectedCampId);
+    };
+
+    const renderTable = (title, rows, actionLabel, onClick) => (
+        <div className="card">
+            <div className="card-header">
+                <h2>{title}</h2>
+            </div>
+            <div className="card-body p-0">
+                <div className="table-responsive">
+                    <table className="data-table">
+                        <thead>
+                            <tr>
+                                <th>Donor</th>
+                                <th>Blood Group</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.length === 0 ? (
+                                <tr><td colSpan="5" style={{ textAlign: 'center', padding: 18 }}>No donors in this stage.</td></tr>
+                            ) : rows.map((reg) => (
+                                <tr key={reg.id}>
+                                    <td>{reg.donor_name}</td>
+                                    <td>{reg.donor_blood_group || 'N/A'}</td>
+                                    <td>{reg.donor_phone || 'N/A'}</td>
+                                    <td><span className={`badge ${reg.status}`}>{reg.status}</span></td>
+                                    <td>
+                                        <button
+                                            className="btn btn-primary"
+                                            disabled={processingId === reg.id}
+                                            onClick={() => onClick(reg.id)}
+                                        >
+                                            {processingId === reg.id ? 'Updating...' : actionLabel}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="dashboard lab-dashboard fade-in">
-            <div className="dashboard-header">
+            <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
                 <div>
-                    <h1 className="welcome-text">Inventory Management</h1>
-                    <p className="text-muted">Central City Hospital Blood Bank</p>
+                    <h1 className="welcome-text" style={{ margin: 0, marginBottom: '4px' }}>Camp Operations Dashboard</h1>
+                    <p className="text-muted" style={{ margin: 0 }}>Scan donor → Arrived → Screening → Donated</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowAddForm(!showAddForm)}>
-                    <PlusCircle size={20} style={{ marginRight: '8px' }} />
-                    Add New Packet
-                </button>
+                <div style={{ display: 'flex', gap: 10, flex: 'none' }}>
+                    <button className="btn btn-outline" onClick={() => loadData(selectedCampId)} style={{ width: 'max-content' }}>
+                        <RefreshCcw size={16} style={{ marginRight: 6 }} /> Refresh
+                    </button>
+                    <button className="btn btn-primary" onClick={openNotifications} style={{ width: 'max-content' }}>
+                        <Bell size={16} style={{ marginRight: 6 }} /> Notifications ({unreadCount})
+                    </button>
+                </div>
             </div>
 
             <div className="dashboard-grid">
-                {/* Alerts Column */}
                 <div className="col-span-12">
                     <div className="alert-card wrapper-alert">
                         <div className="alert-icon-wrapper">
-                            <AlertTriangle size={24} color="var(--color-expiring)" />
+                            <Clock size={24} color="var(--color-expiring)" />
                         </div>
                         <div className="alert-text">
-                            <h4>Expiry Warning (7-Day Protocol)</h4>
-                            <p>5 packets of A+ and 2 packets of O- are expiring within the next 7 days. Please prioritize FIFO issuance.</p>
+                            <h4>Current Camp</h4>
+                            <p>Select a camp and process donors through each workflow stage.</p>
                         </div>
-                        <button className="btn btn-outline text-sm bg-white">View Expiring Only</button>
+                        <select
+                            className="form-control"
+                            style={{ maxWidth: 300 }}
+                            value={selectedCampId}
+                            onChange={(e) => loadData(e.target.value)}
+                        >
+                            {camps.length === 0 && <option value="">No camps found</option>}
+                            {camps.map((camp) => (
+                                <option key={camp.id} value={camp.id}>
+                                    {camp.title} ({camp.date})
+                                </option>
+                            ))}
+                        </select>
+                        <button className="btn btn-outline text-sm bg-white" onClick={() => loadData(selectedCampId)}>
+                            <AlertTriangle size={16} style={{ marginRight: 6 }} /> Live Polling Enabled
+                        </button>
                     </div>
                 </div>
 
-                {/* Add Packet Form (Toggleable) */}
-                {showAddForm && (
-                    <div className="col-span-12 fade-in">
-                        <div className="card">
-                            <div className="card-header">
-                                <h2>Register New Blood Packet</h2>
-                                <button className="btn btn-outline text-xs" onClick={() => setShowAddForm(false)}>Cancel</button>
-                            </div>
-                            <div className="card-body">
-                                <form className="add-packet-form">
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label>Donor ID</label>
-                                            <input type="text" placeholder="e.g. D-10492" className="form-control" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Blood Group</label>
-                                            <select className="form-control">
-                                                <option value="">Select Type</option>
-                                                <option value="A+">A+</option>
-                                                <option value="O-">O-</option>
-                                                <option value="B+">B+</option>
-                                            </select>
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Collection Date</label>
-                                            <input type="date" className="form-control" />
-                                        </div>
-                                    </div>
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label>Volume (ml)</label>
-                                            <input type="number" defaultValue="450" className="form-control" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Component Type</label>
-                                            <select className="form-control">
-                                                <option value="Whole Blood">Whole Blood</option>
-                                                <option value="Red Cells">Packed Red Cells</option>
-                                                <option value="Platelets">Platelets</option>
-                                                <option value="Plasma">Plasma</option>
-                                            </select>
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Location / Fridge ID</label>
-                                            <input type="text" placeholder="e.g. F-02-Shelf-A" className="form-control" />
-                                        </div>
-                                    </div>
-                                    <div className="form-actions">
-                                        <button type="button" className="btn btn-primary" onClick={() => setShowAddForm(false)}>Log Packet</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Master Inventory Tracking */}
                 <div className="col-span-12">
-                    <div className="card">
-                        <div className="card-header">
-                            <h2>Master Inventory List (FIFO Ordered)</h2>
-                        </div>
-                        <div className="card-body p-0">
-                            <div className="table-responsive">
-                                <table className="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Packet ID</th>
-                                            <th>Blood Group</th>
-                                            <th>Component</th>
-                                            <th>Collection Date</th>
-                                            <th>Expiry Date</th>
-                                            <th>Location</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>#PKU-84920</td>
-                                            <td><strong>A+</strong></td>
-                                            <td>Whole Blood</td>
-                                            <td>Oct 01, 2025</td>
-                                            <td className="text-expiring"><AlertTriangle size={14} className="inline-icon" /> Oct 15, 2025</td>
-                                            <td>F-01-A</td>
-                                            <td><span className="badge warning">Expiring Soon</span></td>
-                                            <td><button className="btn btn-outline text-xs">Update Status</button></td>
-                                        </tr>
-                                        <tr>
-                                            <td>#PKU-84921</td>
-                                            <td><strong>O-</strong></td>
-                                            <td>Red Cells</td>
-                                            <td>Oct 10, 2025</td>
-                                            <td>Nov 21, 2025</td>
-                                            <td>F-02-C</td>
-                                            <td><span className="badge safe">Stored</span></td>
-                                            <td><button className="btn btn-outline text-xs">Update Status</button></td>
-                                        </tr>
-                                        <tr>
-                                            <td>#PKU-84925</td>
-                                            <td><strong>B+</strong></td>
-                                            <td>Whole Blood</td>
-                                            <td>Sep 15, 2025</td>
-                                            <td className="text-critical"><strong>Expired</strong></td>
-                                            <td>Q-Zone</td>
-                                            <td><span className="badge critical">Wasted</span></td>
-                                            <td><button className="btn btn-outline text-xs">Discard</button></td>
-                                        </tr>
-                                        <tr>
-                                            <td>#PKU-84930</td>
-                                            <td><strong>AB+</strong></td>
-                                            <td>Plasma</td>
-                                            <td>Oct 12, 2025</td>
-                                            <td>Oct 12, 2026</td>
-                                            <td>F-04-B</td>
-                                            <td><span className="badge safe">Stored</span></td>
-                                            <td><button className="btn btn-outline text-xs">Update Status</button></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                    {loading ? (
+                        <div className="card"><div className="card-body">Loading donor workflow...</div></div>
+                    ) : (
+                        <>
+                            {renderTable('Registered Donors', grouped.registered, 'Mark Arrived', (id) => runAction(id, 'arrive'))}
+                            {renderTable('Arrived Donors', grouped.arrived, 'Send to Doctor', (id) => runAction(id, 'screening'))}
+                            {renderTable('Approved Donors', grouped.approved, 'Mark Donated', (id) => runAction(id, 'donated'))}
+                        </>
+                    )}
                 </div>
             </div>
         </div>

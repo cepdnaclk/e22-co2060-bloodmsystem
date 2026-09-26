@@ -2,8 +2,9 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import dayjs from "dayjs";
 import { useAuth } from '../context/auth/useAuth';
+import { API_BASE_URL } from '../config/apiConfig';
 
-const baseURL = "http://localhost:8000/api/v1/auth";
+const baseURL = `${API_BASE_URL.replace(/\/$/, '')}/auth`;
 
 const useAxios = () => {
     const { authTokens, setUser, setAuthTokens } = useAuth();

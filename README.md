@@ -1,4 +1,4 @@
-# 🩸 DevDynamos Blood Bank Application
+# HopeDrop - Blood Bank Management System
 
 A full-stack Blood Bank Management System designed to efficiently manage **blood donations, inventory, camps, and emergency requests**. The platform supports multiple user roles with secure and role-based access.
 

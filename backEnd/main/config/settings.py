@@ -10,11 +10,20 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from datetime import timedelta
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env file if present
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / ".env")
+except ImportError:
+    pass
 
 # Custom User Model - MUST be defined before INSTALLED_APPS
 AUTH_USER_MODEL = "UserAuth.User"
@@ -24,12 +33,21 @@ AUTH_USER_MODEL = "UserAuth.User"
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-)t-yh@f0)nru3%wo$s2dh9l2t_+npo8dq8rxn14a^d!hu-@$$8"
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-)t-yh@f0)nru3%wo$s2dh9l2t_+npo8dq8rxn14a^d!hu-@$$8"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "True").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = []
+# Hosts allowed to access Django
+allowed_hosts_env = os.environ.get("ALLOWED_HOSTS")
+if allowed_hosts_env:
+    ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_env.split(",") if h.strip()]
+else:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".onrender.com", ".vercel.app"]
+
 
 
 # Application definition
@@ -93,12 +111,33 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL:
+    try:
+        import dj_database_url
+        DATABASES = {
+            "default": dj_database_url.config(
+                default=DATABASE_URL,
+                conn_max_age=600,
+                conn_health_checks=True,
+                ssl_require=True,
+            )
+        }
+    except ImportError:
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
+            }
+        }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
-}
+
 
 
 # Password validation
@@ -141,7 +180,10 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [
     BASE_DIR / "static",
-]
+] if (BASE_DIR / "static").exists() else []
+
+# WhiteNoise compressed caching storage
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Media files (user uploads)
 MEDIA_URL = "/media/"
@@ -153,7 +195,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# CORS Settings (allow React to communicate with Django)
+# CORS Settings (allow React frontend to communicate with Django)
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -162,9 +204,20 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+extra_cors = os.environ.get("CORS_ALLOWED_ORIGINS")
+if extra_cors:
+    CORS_ALLOWED_ORIGINS.extend([origin.strip() for origin in extra_cors.split(",") if origin.strip()])
 
-#CORS_ALLOW_CREDENTIALS = True  # It tells browser that sending cookies is safe.
-CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins (for development only, be careful in production)
+# Match all Vercel deployment URLs automatically
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+]
+
+# Allow all origins in development; require explicit origins in production
+CORS_ALLOW_ALL_ORIGINS = os.environ.get(
+    "CORS_ALLOW_ALL_ORIGINS", "True" if DEBUG else "False"
+).lower() in ("true", "1")
+CORS_ALLOW_CREDENTIALS = True
 
 # REST Framework Settings
 REST_FRAMEWORK = {
@@ -173,12 +226,12 @@ REST_FRAMEWORK = {
     ),
 }
 
-
-# Session Settings (for authentication with React)
+# Session Settings
 SESSION_COOKIE_SAMESITE = None
-SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 CSRF_COOKIE_SAMESITE = None
-CSRF_COOKIE_SECURE = False  # Set to True in production
+CSRF_COOKIE_SECURE = not DEBUG  # True in production
+
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -186,39 +239,35 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5174",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://*.onrender.com",
+    "https://*.vercel.app",
 ]
+extra_csrf = os.environ.get("CSRF_TRUSTED_ORIGINS")
+if extra_csrf:
+    CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in extra_csrf.split(",") if origin.strip()])
 
 
 SIMPLE_JWT = {
-    # How long the access token is valid (default is 5 minutes)
+    # How long the access token is valid (default is 15 minutes)
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     # How long the refresh token is valid (default is 1 day)
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     # If True, every time a refresh token is used, a NEW refresh token is issued
     "ROTATE_REFRESH_TOKENS": True,
-    # If True, the old refresh token is blacklisted after being used.
-    # (requires Blacklist app)
+    # If True, the old refresh token is blacklisted after being used
     "BLACKLIST_AFTER_ROTATION": True,
-    # The prefix required in the header, e.g., "Authorization: Bearer <token>"
     "AUTH_HEADER_TYPES": ("Bearer",),
-    # Use a different key for signing if you don't want to use Django's SECRET_KEY
-    "SIGNING_KEY": "your-secret-signing-key",
-    # Which user field to include in the token (usually 'id')
+    "SIGNING_KEY": os.environ.get("JWT_SIGNING_KEY", SECRET_KEY),
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
 }
 
-#email configuration
-# settings.py
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-EMAIL_HOST = 'smtp.gmail.com'
-#email provider
-EMAIL_PORT = 587
-EMAIL_USE_TLS = False
-
-EMAIL_HOST_USER = 'dulajnew01@gmail.com'
-EMAIL_HOST_PASSWORD = 'arqxzjidggqfxlyq'
-
-DEFAULT_FROM_EMAIL = 'dulajnew01@gmail.com'
+# Email configuration
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() in ("true", "1", "t")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "dulajnew01@gmail.com")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "arqxzjidggqfxlyq")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 FRONTEND_URL = 'http://localhost:3000'

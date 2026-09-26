@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { showSuccessToast, showErrorToast } from '../../utils/swalUtils';
+import { API_BASE_URL } from '../../config/apiConfig';
 import './ForgotPassword.css';
 
 const ResetPassword = () => {
@@ -27,7 +28,7 @@ const ResetPassword = () => {
 
         const validateToken = async () => {
             try {
-                await axios.post('http://localhost:8000/api/v1/auth/password-reset/validate_token/', {
+                await axios.post(`${API_BASE_URL.replace(/\/$/, '')}/auth/password-reset/validate_token/`, {
                     token: token,
                 });
                 setTokenValid(true);
@@ -83,7 +84,7 @@ const ResetPassword = () => {
         setLoading(true);
 
         try {
-            await axios.post('http://localhost:8000/api/v1/auth/password-reset/confirm/', {
+            await axios.post(`${API_BASE_URL.replace(/\/$/, '')}/auth/password-reset/confirm/`, {
                 token: token,
                 password: password,
             });
